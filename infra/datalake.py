@@ -17,12 +17,12 @@ class DataLakeLayer(core.Construct):
       enable_dns_hostnames=True,
       enable_dns_support=True,
       max_azs=2,
-      nat_gateways=2,
+      nat_gateways=0,
       subnet_configuration=[
-        ec2.SubnetConfiguration(name='Private', subnet_type= ec2.SubnetType.PRIVATE, cidr_mask=24),
+        #ec2.SubnetConfiguration(name='Private', subnet_type= ec2.SubnetType.PRIVATE, cidr_mask=24),
         ec2.SubnetConfiguration(name='NetStore', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=24)
       ])
-    VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
+    #VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
 
     # self.product_descr_bucket = s3.Bucket(self,'AndroidProducts',
     #   removal_policy= core.RemovalPolicy.DESTROY)
