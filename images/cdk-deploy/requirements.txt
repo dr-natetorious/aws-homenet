@@ -8,3 +8,4 @@ aws_cdk.aws_lambda_event_sources
 aws_cdk.aws_ecs_patterns
 aws_cdk.aws_rds
 aws_cdk.aws_elasticsearch
+aws_cdk.aws_directoryservice

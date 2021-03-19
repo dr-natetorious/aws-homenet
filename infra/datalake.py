@@ -3,7 +3,8 @@ from aws_cdk import (
     core,
     aws_s3 as s3,
     aws_ec2 as ec2,
-    aws_efs as efs
+    aws_efs as efs,
+    aws_directoryservice as ad
 )
 
 class DataLakeLayer(core.Construct):
@@ -19,27 +20,18 @@ class DataLakeLayer(core.Construct):
       max_azs=2,
       nat_gateways=0,
       subnet_configuration=[
-        #ec2.SubnetConfiguration(name='Private', subnet_type= ec2.SubnetType.PRIVATE, cidr_mask=24),
-        ec2.SubnetConfiguration(name='NetStore', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=24)
+        ec2.SubnetConfiguration(name='NetStore', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=24),
+        ec2.SubnetConfiguration(name='Identity', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=27)
       ])
     VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
 
-    # self.product_descr_bucket = s3.Bucket(self,'AndroidProducts',
-    #   removal_policy= core.RemovalPolicy.DESTROY)
-
-    # self.efs_sg = ec2.SecurityGroup(self,'EfsGroup',
-    #   vpc=self.vpc,
-    #   allow_all_outbound=True,
-    #   description='Security Group for ApkStore EFS')
-
-    # self.efs_sg.add_ingress_rule(
-    #   peer= ec2.Peer.any_ipv4(),
-    #   connection=ec2.Port.all_traffic(),
-    #   description='Allow any traffic')
-
-    # self.efs = efs.FileSystem(self,'ApkStore',
-    #   vpc=self.vpc,
-    #   security_group= self.efs_sg,
-    #   lifecycle_policy= efs.LifecyclePolicy.AFTER_14_DAYS,
-    #   performance_mode= efs.PerformanceMode.GENERAL_PURPOSE)
-
+    self.mad = ad.CfnMicrosoftAD(self,'ActiveDirectory',
+      name='virtual.world',
+      password='I-l1K3-74(oz',
+      short_name='virtualworld',
+      enable_sso=False,
+      edition= 'Enterprise',
+      vpc_settings= ad.CfnMicrosoftAD.VpcSettingsProperty(
+        vpc_id=self.vpc.vpc_id,
+        subnet_ids= self.vpc.select_subnets(subnet_group_name='Identity').subnet_ids
+      ))
