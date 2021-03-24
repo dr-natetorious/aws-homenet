@@ -39,7 +39,8 @@ class VpcEndpointsForAWSServices(core.Construct):
       'elasticfilesystem', 'lambda', 'states',
       'events', 'execute-api', 'kinesis-streams',
       'kinesis-firehose', 'logs', 'sns', 'sqs',
-      'secretsmanager', 'config', 'ecr.api', 'ecr.dkr']:
+      'secretsmanager', 'config', 'ecr.api', 'ecr.dkr',
+      'storagegateway']:
       self.interfaces[svc] = ec2.InterfaceVpcEndpoint(
         self, svc,
         vpc=vpc,

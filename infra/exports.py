@@ -1,17 +1,17 @@
-from infra.datalake import DataLakeLayer
-#from infra.compute import ComputeLayer
-#from infra.sonarqube import SonarQubeLayer
-#from infra.search import ElasticSearchLayer
+from infra.networking import NetworkingLayer
+from infra.subnets.identity import IdentitySubnet
+from infra.subnets.netstore import NetStoreSubnet
+
 def create_layers(scope):
-  
-  storage = DataLakeLayer(scope,'DataLake')
-  #compute = ComputeLayer(scope,'Compute',datalake=storage)
-  #search = ElasticSearchLayer(scope,'Elastic',datalake=storage)
-  #sonar = SonarQubeLayer(scope,'SonarQube', datalake=storage)
+  """
+  Create the application layers.
+  """  
+  networking = NetworkingLayer(scope,'DataLake')
+  identity = IdentitySubnet(scope,'Identity',vpc=networking.vpc)
+  netstore = NetStoreSubnet(scope,'NetStore', vpc=networking.vpc)
 
   return [
-    storage,
-    #compute,
-   # search,
-    #sonar
+    networking,
+    identity,
+    netstore,
   ]
