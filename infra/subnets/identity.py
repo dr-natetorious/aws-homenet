@@ -6,7 +6,8 @@ from aws_cdk import (
   aws_ec2 as ec2,
   aws_efs as efs,
   aws_directoryservice as ad,
-  aws_eks as eks
+  aws_eks as eks,
+  aws_acmpca as ca,
 )
 
 class IdentitySubnet(core.Construct):
@@ -23,3 +24,14 @@ class IdentitySubnet(core.Construct):
         vpc_id= vpc.vpc_id,
         subnet_ids= vpc.select_subnets(subnet_group_name='Identity').subnet_ids
       ))
+
+    self.cert_auth = ca.CfnCertificateAuthority(self,'CertAuth',
+      key_algorithm='RSA_2048',
+      signing_algorithm='SHA256WITHRSA',
+      type='ROOT',
+      subject=ca.CfnCertificateAuthority.SubjectProperty(
+        common_name='cert.virtual.world',
+        country='US',
+        state='VW',
+        organization='HomeNet',
+        locality='virtual.world'))
