@@ -31,12 +31,12 @@ class VpnSubnet(core.Construct):
       allow_all_outbound=True,
       description='VPN clients')
 
-    ec2.CfnClientVpnEndpoint(self,'VpnEp',
+    endpoint = ec2.CfnClientVpnEndpoint(self,'VpnEp',
       vpc_id=vpc.vpc_id,
       vpn_port=443,
       self_service_portal='enabled',
       split_tunnel=True,
-      client_cidr_block='10.0.8.0/22',
+      client_cidr_block='10.1.8.0/22',
       server_certificate_arn='arn:aws:acm:us-east-1:581361757134:certificate/14e094b5-fd1d-4031-b0cc-4be1b77e5955',
       description='HomeNet vpc:endpoint',
       security_group_ids=[security_group.security_group_id],
@@ -44,10 +44,27 @@ class VpnSubnet(core.Construct):
         ec2.CfnClientVpnEndpoint.ClientAuthenticationRequestProperty(
           type='directory-service-authentication',
           active_directory=ec2.CfnClientVpnEndpoint.DirectoryServiceAuthenticationRequestProperty(
-            directory_id= directory.ref))
+            directory_id= directory.ref)),
       ],
       connection_log_options= 
         ec2.CfnClientVpnEndpoint.ConnectionLogOptionsProperty(
           enabled=True,
           cloudwatch_log_group= log_group.log_group_name,
           cloudwatch_log_stream= log_stream.log_stream_name))
+
+    count=0
+    for net in vpc.select_subnets(subnet_group_name='Vpn-Clients').subnets:
+      count += 1
+      ec2.CfnClientVpnTargetNetworkAssociation(self,'Network-'+str(count),
+        client_vpn_endpoint_id=endpoint.ref,
+        subnet_id= net.subnet_id)
+        
+    # ec2.CfnClientVpnTargetNetworkAssociation(self,'NetworkAssociation',
+    #   client_vpn_endpoint_id=endpoint.ref,
+    #   subnet_id= 'subnet-07f0e80d0ed1c1a27')
+
+    ec2.CfnClientVpnAuthorizationRule(self,'ClientAuthorization',
+      authorize_all_groups=True,
+      target_network_cidr='10.0.0.0/16',
+      client_vpn_endpoint_id= endpoint.ref,
+      description='Allow everyone/everywhere')
