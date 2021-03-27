@@ -5,6 +5,7 @@ from typing import List
 from aws_cdk.core import App, Stack, Environment, Construct, NestedStack
 from infra.exports import create_layers, landing_zone
 from infra.networking import VpcPeeringConnection, HomeNetVpn
+from infra.networking import NetworkingLayer
 from infra.vpce import VpcEndpointsForAWSServices
 from aws_cdk import (
     core,
@@ -31,47 +32,30 @@ class LandingZone(Stack):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
 
-  #   self.vpc = ec2.Vpc(self,'Network',
-  #     cidr=self.cidr_block,
-  #     enable_dns_hostnames=True,
-  #     enable_dns_support=True,
-  #     max_azs=2,
-  #     nat_gateways=1,
-  #     subnet_configuration=self.subnet_configuration)
-  #   VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
-
-  # @property
-  # @abstractmethod
-  # def cidr_block(self) -> str:
-  #   raise NotImplementedError()
-
-  # @property
-  # @abstractmethod
-  # def subnet_configuration(self) -> List[ec2.SubnetConfiguration]:
-  #   raise NotImplementedError()
+  def landing_zone(self, name:str,cidr:str):
+    """
+    Create the networking
+    """
+    self.networking = NetworkingLayer(self,name,cidr)
 
 class Virginia(LandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
 
-    self.networking = landing_zone(self,'DataLake','10.0.0.0/16')
+    self.landing_zone('DataLake','10.0.0.0/16')
     create_layers(self,self.networking)
-
-  @property
-  def cidr_block(self)->str:
-    return '10.0.0.0/16'
 
 class Ireland(LandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
 
-    self.networking = landing_zone(self,'Ireland',cidr='10.10.0.0/16')
+    self.landing_zone('Ireland',cidr='10.10.0.0/16')
 
 class Tokyo(LandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
 
-    self.networking = landing_zone(self,'Tokyo',cidr='10.20.0.0/16')
+    self.landing_zone('Tokyo',cidr='10.20.0.0/16')
 
 class NetworkingApp(App):
   def __init__(self, **kwargs) ->None:
