@@ -1,4 +1,5 @@
 from infra.vpce import VpcEndpointsForAWSServices
+from typing import List
 from aws_cdk import (
     core,
     aws_iam as iam,
@@ -13,7 +14,7 @@ class NetworkingLayer(core.Construct):
   """
   Configure the networking layer
   """
-  def __init__(self, scope: core.Construct, id: str,cidr:str, **kwargs) -> None:
+  def __init__(self, scope: core.Construct, id: str,cidr:str,subnet_configuration:List[ec2.SubnetConfiguration], **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
 
     self.vpc = ec2.Vpc(self,'Network',
@@ -22,27 +23,39 @@ class NetworkingLayer(core.Construct):
       enable_dns_support=True,
       max_azs=2,
       nat_gateways=1,
-      subnet_configuration=[
-        ec2.SubnetConfiguration(name='NetStore', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=24),
-        ec2.SubnetConfiguration(name='Identity', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=27),
-        ec2.SubnetConfiguration(name='Vpn', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=27),
-        ec2.SubnetConfiguration(name='Public', subnet_type=ec2.SubnetType.PUBLIC, cidr_mask=28),
-        ec2.SubnetConfiguration(name='Vpn-Clients', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=22),
-        #ec2.SubnetConfiguration(name='NCU', subnet_type= ec2.SubnetType.PRIVATE, cidr_mask=24)
-      ])
+      subnet_configuration=subnet_configuration)
     VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
 
 class VpcPeeringConnection(core.Construct):
   """
   Establishes a cross-vpc peering
   """
-  def __init__(self, scope: core.Construct, id: str, vpc:ec2.IVpc, peer_vpc_id:str,peer_region:str, **kwargs) -> None:
+  def __init__(self, scope: core.Construct, id: str, peer_name:str, vpc:ec2.IVpc, peer_vpc_id:str,peer_region:str, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
 
-    self.peering = ec2.CfnVPCPeeringConnection(scope,'Peer/'+id,
+    self.peering = ec2.CfnVPCPeeringConnection(scope,'Peer/'+peer_name,
       peer_region=peer_region,# core.Stack.of(peer).region,
       peer_vpc_id= peer_vpc_id,# peer.vpc_id,
-      vpc_id=vpc.vpc_id)
+      vpc_id=vpc.vpc_id,
+      tags=[
+        core.CfnTag(key='Name',value='Peer('+peer_name+')')
+      ])
+
+class TransitGatewayLayer(core.Construct):
+  def __init__(self, scope: core.Construct, id: str, **kwargs) -> None:
+    super().__init__(scope, id, **kwargs)
+
+    self.gateway = ec2.CfnTransitGateway(self,'TransitGateway',
+      amazon_side_asn=64512,
+      auto_accept_shared_attachments='enable',
+      default_route_table_association='enable',
+      default_route_table_propagation='enable',
+      description='HomeNet TransitGateway',
+      dns_support='enable',
+      vpn_ecmp_support='enable',
+      tags=[
+        core.CfnTag(key='Name',value='HomeNet/TGW')
+      ])
 
 class HomeNetVpn(core.Construct):
   """
