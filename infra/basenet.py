@@ -2,8 +2,11 @@
 import os.path
 from typing import List
 from aws_cdk.core import App, Stack, Environment, Construct, NestedStack
-from infra.exports import create_layers, landing_zone
 from infra.networking import VpcPeeringConnection, HomeNetVpn, NetworkingLayer,TransitGatewayLayer
+from infra.networking import NetworkingLayer
+from infra.subnets.identity import IdentitySubnet
+from infra.subnets.netstore import NetStoreSubnet
+from infra.subnets.vpn import VpnSubnet
 from infra.vpce import VpcEndpointsForAWSServices
 from aws_cdk import (
     core,
@@ -54,8 +57,12 @@ class LandingZone(Stack):
 class Virginia(LandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
+    
+    vpc = self.networking.vpc
 
-    create_layers(self,self.networking)
+    self.identity = IdentitySubnet(self,'Identity',vpc=vpc)
+    self.netstore = NetStoreSubnet(self,'NetStore', vpc=vpc)
+    self.vpn = VpnSubnet(self,'Vpn',vpc=vpc, directory=self.identity.mad)
 
   @property
   def cidr_block(self)->str:
