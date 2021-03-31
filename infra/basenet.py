@@ -15,12 +15,6 @@ from aws_cdk import (
 
 src_root_dir = os.path.join(os.path.dirname(__file__))
 
-us_east_1 = Environment(region="us-east-1", account='581361757134')
-eu_west_1 = Environment(region="eu-west-1", account='581361757134')
-ap_ne_1 = Environment(region='ap-northeast-1', account='581361757134')
-us_west_2 = Environment(region='us-west-2', account='581361757134')
-ca_central_1 =Environment(region='ca-central-1', account='581361757134')
-
 # https://stackoverflow.com/questions/59774627/cloudformation-cross-region-reference
 vpc_ids = {
   'ireland':'vpc-015bcd20789d6fc50',
@@ -141,63 +135,3 @@ class Oregon(VpnLandingZone):
   @property
   def zone_name(self)->str:
     return 'Oregon'
-
-class NetworkingApp(App):
-  def __init__(self, **kwargs) ->None:
-    super().__init__(**kwargs)
-
-    self.virginia = Virginia(self,'HomeNet', env=us_east_1)
-    self.ireland = Ireland(self,'EuroNet', env=eu_west_1)
-    self.tokyo = Tokyo(self,'Tokyo', env=ap_ne_1)
-    #self.canada = Canada(self,'Canada', env=ca_central_1)
-    self.oregon = Oregon(self,'Oregon', env=us_west_2)
-
-    #self.enable_peering()
-    self.establish_tgw()
-
-  @property
-  def zones(self)->List[LandingZone]:
-    return [self.virginia, self.ireland, self.tokyo, self.oregon ] #, self.canada]
-
-  def establish_tgw(self)->None:
-    """
-    Configure the Transit Gateways
-    """
-    amazon_asn=64512
-    for lz in self.zones:
-      amazon_asn+=1
-      gateway = ec2.CfnTransitGateway(lz,'TransitGateway',
-        amazon_side_asn=amazon_asn,
-        auto_accept_shared_attachments='enable',
-        default_route_table_association='enable',
-        default_route_table_propagation='enable',
-        description='HomeNet TransitGateway',
-        dns_support='enable',
-        vpn_ecmp_support='enable',
-        tags=[
-          core.CfnTag(key='Name',value='HomeNet/TGW')
-        ])
-
-      ec2.CfnTransitGatewayAttachment(lz,'TGWAttachment',
-        subnet_ids=lz.vpc.select_subnets(subnet_group_name='TGW').subnet_ids,
-        transit_gateway_id=gateway.ref,
-        vpc_id= lz.vpc.vpc_id,
-        tags=[core.CfnTag(key='Name',value='HomeNet')])
-
-      # ssm.StringParameter(self,'VpcId',
-      #   parameter_name='/homenet/{}/tgw/gateway_id'.format(lz.zone_name),
-      #   string_value=gateway.ref,
-      #   type= ssm.ParameterType.STRING)
-
-  def enable_peering(self):
-    VpcPeeringConnection(self.virginia,'Connection/Ireland',
-      peer_name='Ireland',
-      vpc=self.virginia.vpc,
-      peer_vpc_id=vpc_ids['ireland'],
-      peer_region='eu-west-1')
-
-    VpcPeeringConnection(self.virginia,'Connection/Tokyo',
-      peer_name='Tokyo',
-      vpc=self.virginia.vpc,
-      peer_vpc_id=vpc_ids['tokyo'],
-      peer_region='ap-northeast-1')
