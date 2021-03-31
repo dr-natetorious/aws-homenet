@@ -3,19 +3,14 @@ import os.path
 from typing import List
 from aws_cdk.core import App, Stack, Environment, Construct, NestedStack
 from infra.networking import VpcPeeringConnection, HomeNetVpn, NetworkingLayer,TransitGatewayLayer
-from infra.networking import NetworkingLayer
 from infra.subnets.identity import IdentitySubnet
 from infra.subnets.netstore import NetStoreSubnet
 from infra.subnets.vpn import VpnSubnet
 from infra.vpce import VpcEndpointsForAWSServices
 from aws_cdk import (
     core,
-    aws_iam as iam,
-    aws_s3 as s3,
     aws_ec2 as ec2,
-    aws_efs as efs,
-    aws_directoryservice as ad,
-    aws_eks as eks
+    aws_ssm as ssm,
 )
 
 src_root_dir = os.path.join(os.path.dirname(__file__))
@@ -23,6 +18,8 @@ src_root_dir = os.path.join(os.path.dirname(__file__))
 us_east_1 = Environment(region="us-east-1", account='581361757134')
 eu_west_1 = Environment(region="eu-west-1", account='581361757134')
 ap_ne_1 = Environment(region='ap-northeast-1', account='581361757134')
+us_west_2 = Environment(region='us-west-2', account='581361757134')
+ca_central_1 =Environment(region='ca-central-1', account='581361757134')
 
 # https://stackoverflow.com/questions/59774627/cloudformation-cross-region-reference
 vpc_ids = {
@@ -36,7 +33,7 @@ class LandingZone(Stack):
 
     self.networking = NetworkingLayer(self,self.zone_name,
       cidr=self.cidr_block,
-      subnet_configuration=self.subnet_configuration)
+      subnet_configuration=self.subnet_configuration)    
 
   @property
   def cidr_block(self)->str:
@@ -54,11 +51,13 @@ class LandingZone(Stack):
   def vpc(self)->ec2.IVpc:
     return self.networking.vpc
 
+
 class Virginia(LandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
     
     vpc = self.networking.vpc
+    VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
 
     self.identity = IdentitySubnet(self,'Identity',vpc=vpc)
     self.netstore = NetStoreSubnet(self,'NetStore', vpc=vpc)
@@ -92,8 +91,6 @@ class VpnLandingZone(LandingZone):
   def subnet_configuration(self)->List[ec2.SubnetConfiguration]:
     return [
       ec2.SubnetConfiguration(name='Public', subnet_type= ec2.SubnetType.PUBLIC,cidr_mask=24),
-      ec2.SubnetConfiguration(name='Vpn-Clients', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=22),
-      ec2.SubnetConfiguration(name='Identity',subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=27),
       ec2.SubnetConfiguration(name='TGW', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28),
     ]
 
@@ -121,6 +118,30 @@ class Tokyo(VpnLandingZone):
   def zone_name(self)->str:
     return 'Tokyo'
 
+class Canada(VpnLandingZone):
+  def __init__(self, scope:Construct, id:str, **kwargs)->None:
+    super().__init__(scope, id, **kwargs)
+
+  @property
+  def cidr_block(self)->str:
+    return '10.30.0.0/16'
+
+  @property
+  def zone_name(self)->str:
+    return 'Canada'
+
+class Oregon(VpnLandingZone):
+  def __init__(self, scope:Construct, id:str, **kwargs)->None:
+    super().__init__(scope, id, **kwargs)
+
+  @property
+  def cidr_block(self)->str:
+    return '10.40.0.0/16'
+
+  @property
+  def zone_name(self)->str:
+    return 'Oregon'
+
 class NetworkingApp(App):
   def __init__(self, **kwargs) ->None:
     super().__init__(**kwargs)
@@ -128,16 +149,20 @@ class NetworkingApp(App):
     self.virginia = Virginia(self,'HomeNet', env=us_east_1)
     self.ireland = Ireland(self,'EuroNet', env=eu_west_1)
     self.tokyo = Tokyo(self,'Tokyo', env=ap_ne_1)
+    #self.canada = Canada(self,'Canada', env=ca_central_1)
+    self.oregon = Oregon(self,'Oregon', env=us_west_2)
 
     #self.enable_peering()
     self.establish_tgw()
 
   @property
   def zones(self)->List[LandingZone]:
-    return [self.virginia, self.ireland, self.tokyo]
+    return [self.virginia, self.ireland, self.tokyo, self.oregon ] #, self.canada]
 
   def establish_tgw(self)->None:
-    
+    """
+    Configure the Transit Gateways
+    """
     amazon_asn=64512
     for lz in self.zones:
       amazon_asn+=1
@@ -159,14 +184,10 @@ class NetworkingApp(App):
         vpc_id= lz.vpc.vpc_id,
         tags=[core.CfnTag(key='Name',value='HomeNet')])
 
-    # tgw_id = 'tgw-07adabd18626cda96'
-
-    # for lz in self.get_zones():      
-    #   ec2.CfnTransitGatewayAttachment(lz,'TGWAttachment',
-    #     subnet_ids=lz.vpc.select_subnets(subnet_group_name='TGW').subnet_ids,
-    #     transit_gateway_id=tgw_id,
-    #     vpc_id= lz.vpc.vpc_id,
-    #     tags=[core.CfnTag(key='Name',value='HomeNet')])
+      # ssm.StringParameter(self,'VpcId',
+      #   parameter_name='/homenet/{}/tgw/gateway_id'.format(lz.zone_name),
+      #   string_value=gateway.ref,
+      #   type= ssm.ParameterType.STRING)
 
   def enable_peering(self):
     VpcPeeringConnection(self.virginia,'Connection/Ireland',

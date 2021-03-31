@@ -7,7 +7,8 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_efs as efs,
     aws_directoryservice as ad,
-    aws_eks as eks
+    aws_eks as eks,
+    aws_ssm as ssm,
 )
 
 class NetworkingLayer(core.Construct):
@@ -24,7 +25,11 @@ class NetworkingLayer(core.Construct):
       max_azs=2,
       nat_gateways=1,
       subnet_configuration=subnet_configuration)
-    VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
+    
+    ssm.CfnParameter(self,'VpcId',
+      name='/homenet/{}/vpc/id'.format(id),
+      value=self.vpc.vpc_id,
+      type='String')
 
 class VpcPeeringConnection(core.Construct):
   """
