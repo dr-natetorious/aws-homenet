@@ -29,14 +29,6 @@ class NetworkingApp(core.App):
         landing_zone=landing_zone,
         amazon_asn=amazon_asn)
 
-    for owner in self.zones:
-      for peer in self.zones:
-        if owner.zone_name >= peer.zone_name:
-          continue
-
-        CreateAttachment(owner,'CreateAttachmentCall_'+ core.Stack.of(peer).region,
-          owner=owner, peer=peer)
-
   @property
   def zones(self)->List[LandingZone]:
     return [ self.virginia, self.ireland, self.tokyo, self.oregon, self.canada]
