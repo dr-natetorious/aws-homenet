@@ -35,7 +35,7 @@ class ParameterReader(core.Construct):
     self.resource = cr.AwsCustomResource(self,'get_parameters',
       policy= cr.AwsCustomResourcePolicy.from_sdk_calls(
         resources= cr.AwsCustomResourcePolicy.ANY_RESOURCE),
-      on_update=cr.AwsSdkCall(
+      on_create=cr.AwsSdkCall(
         service='SSM',
         action='getParameter',
         parameters={
