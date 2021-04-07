@@ -2,7 +2,7 @@
 import os.path
 from typing import List
 from aws_cdk import core
-from infra.tgw import RegionalGatewayLayer
+from infra.tgw import RegionalGatewayLayer, TransitGatewayPeeringProvider
 from infra.basenet import Virginia,Ireland,Tokyo,Canada,Oregon, LandingZone
 src_root_dir = os.path.join(os.path.dirname(__file__))
 
@@ -28,6 +28,10 @@ class NetworkingApp(core.App):
       RegionalGatewayLayer(landing_zone,'RegionalGateway',
         landing_zone=landing_zone,
         amazon_asn=amazon_asn)
+
+    # TGW_TGW_Attachment(self.virginia,'Virgina_to_EuroNet',
+    #   owner=self.virginia,
+    #   peer=self.ireland)
 
   @property
   def zones(self)->List[LandingZone]:
