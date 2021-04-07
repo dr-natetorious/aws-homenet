@@ -2,8 +2,8 @@
 import os.path
 from typing import List
 from aws_cdk import core
-from infra.tgw import RegionalGatewayLayer, CreateAttachment
-from infra.basenet import Virginia,Ireland,Tokyo,Canada,Oregon, LandingZone
+from infra.tgw import RegionalGatewayLayer
+from infra.basenet import Virginia,Ireland,Tokyo,Canada,Oregon, LandingZone, Chatham
 src_root_dir = os.path.join(os.path.dirname(__file__))
 
 us_east_1 = core.Environment(region="us-east-1", account='581361757134')
@@ -21,6 +21,7 @@ class NetworkingApp(core.App):
     self.tokyo = Tokyo(self,'Tokyo', env=ap_ne_1)
     self.canada = Canada(self,'Canada', env=ca_central_1)
     self.oregon = Oregon(self,'Oregon', env=us_west_2)
+    self.chatham = Chatham(self,'Chatham', vpc=None, env=us_east_1)
 
     amazon_asn=64512
     for landing_zone in self.zones:
@@ -28,6 +29,8 @@ class NetworkingApp(core.App):
       RegionalGatewayLayer(landing_zone,'RegionalGateway',
         landing_zone=landing_zone,
         amazon_asn=amazon_asn)
+
+    
 
   @property
   def zones(self)->List[LandingZone]:

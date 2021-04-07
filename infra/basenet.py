@@ -2,7 +2,7 @@
 import os.path
 from typing import List
 from aws_cdk.core import App, Stack, Environment, Construct, NestedStack
-from infra.networking import VpcPeeringConnection, HomeNetVpn, NetworkingLayer,TransitGatewayLayer
+from infra.networking import NetworkingLayer
 from infra.subnets.identity import IdentitySubnet
 from infra.subnets.netstore import NetStoreSubnet
 from infra.subnets.vpn import VpnSubnet
@@ -14,12 +14,6 @@ from aws_cdk import (
 )
 
 src_root_dir = os.path.join(os.path.dirname(__file__))
-
-# https://stackoverflow.com/questions/59774627/cloudformation-cross-region-reference
-vpc_ids = {
-  'ireland':'vpc-015bcd20789d6fc50',
-  'tokyo':'vpc-020881f58c548c5d0'
-}
 
 class LandingZone(Stack):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
@@ -135,3 +129,38 @@ class Oregon(VpnLandingZone):
   @property
   def zone_name(self)->str:
     return 'Oregon'
+
+class Chatham(core.Stack):
+  """
+  Establish the vpn connection
+  """
+  def __init__(self, scope: core.Construct, id: str,vpc:ec2.IVpc, **kwargs) -> None:
+    super().__init__(scope, id, **kwargs)
+
+    customer_gateway = ec2.CfnCustomerGateway(self,'CustomerGateway',
+      ip_address='100.8.103.189',
+      bgp_asn=65000,
+      type='ipsec.1',
+      tags=[core.CfnTag(key='Name',value='TP-Link Vpn Router')])
+
+    vpn_gateway = ec2.CfnVPNGateway(self,'VpnGateway',
+        amazon_side_asn=64512,
+        type='ipsec.1',
+        tags=[core.CfnTag(key='Name',value='HomeNetGateway')])
+
+    if vpc != None:
+      ec2.CfnVPCGatewayAttachment(self,'HomeNetGatewayAttachment',
+        vpc_id=vpc.vpc_id,
+        vpn_gateway_id=vpn_gateway.ref)
+
+      # [net.route_table.id for net in vpc.select_subnets(subnet_group_name='Vpn').subnets]
+      routes = ec2.CfnVPNGatewayRoutePropagation(self,'VpnGatewayRouteProp',
+        route_table_ids=['rtb-08ca4caec9e6fcc65','rtb-0112514ba8d55834c'],
+        vpn_gateway_id= vpn_gateway.ref)
+      routes.add_depends_on(vpn_gateway)
+    
+    ec2.CfnVPNConnection(self,'Site2Site',
+      customer_gateway_id=customer_gateway.ref,
+      static_routes_only=True,
+      type='ipsec.1',
+      vpn_gateway_id= vpn_gateway.ref)

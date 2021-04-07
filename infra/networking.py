@@ -31,6 +31,21 @@ class NetworkingLayer(core.Construct):
       value=self.vpc.vpc_id,
       type='String')
 
+    ssm.CfnParameter(self,'Cidr',
+      name='/homenet/{}/vpc/cidr'.format(id),
+      value=self.vpc.vpc_cidr_block,
+      type='String')
+
+    ssm.CfnParameter(self,'RegionVpcId',
+      name='/homenet/{}/vpc/id'.format(core.Stack.of(self).region),
+      value=self.vpc.vpc_id,
+      type='String')
+
+    ssm.CfnParameter(self,'RegionCidr',
+      name='/homenet/{}/vpc/cidr'.format(core.Stack.of(self).region),
+      value=self.vpc.vpc_cidr_block,
+      type='String')
+
 class VpcPeeringConnection(core.Construct):
   """
   Establishes a cross-vpc peering
@@ -61,37 +76,3 @@ class TransitGatewayLayer(core.Construct):
       tags=[
         core.CfnTag(key='Name',value='HomeNet/TGW')
       ])
-
-class HomeNetVpn(core.Construct):
-  """
-  Establish the vpn connection
-  """
-  def __init__(self, scope: core.Construct, id: str,vpc:ec2.IVpc, **kwargs) -> None:
-    super().__init__(scope, id, **kwargs)
-
-    customer_gateway = ec2.CfnCustomerGateway(self,'CustomerGateway',
-      ip_address='100.8.103.189',
-      bgp_asn=65000,
-      type='ipsec.1',
-      tags=[core.CfnTag(key='Name',value='TP-Link Vpn Router')])
-
-    vpn_gateway = ec2.CfnVPNGateway(self,'VpnGateway',
-      amazon_side_asn=64512,
-      type='ipsec.1',
-      tags=[core.CfnTag(key='Name',value='HomeNetGateway')])
-
-    ec2.CfnVPCGatewayAttachment(self,'HomeNetGatewayAttachment',
-      vpc_id=vpc.vpc_id,
-      vpn_gateway_id=vpn_gateway.ref)
-
-    # [net.route_table.id for net in vpc.select_subnets(subnet_group_name='Vpn').subnets]
-    routes = ec2.CfnVPNGatewayRoutePropagation(self,'VpnGatewayRouteProp',
-      route_table_ids=['rtb-08ca4caec9e6fcc65','rtb-0112514ba8d55834c'],
-      vpn_gateway_id= vpn_gateway.ref)
-    routes.add_depends_on(vpn_gateway)
-    
-    ec2.CfnVPNConnection(self,'Site2Site',
-      customer_gateway_id=customer_gateway.ref,
-      static_routes_only=True,
-      type='ipsec.1',
-      vpn_gateway_id= vpn_gateway.ref)
