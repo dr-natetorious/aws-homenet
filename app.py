@@ -2,7 +2,7 @@
 import os.path
 from typing import List
 from aws_cdk import core
-from infra.tgw import RegionalGatewayLayer, TransitGatewayPeeringProvider
+from infra.tgw import RegionalGatewayLayer, CreateAttachment
 from infra.basenet import Virginia,Ireland,Tokyo,Canada,Oregon, LandingZone
 src_root_dir = os.path.join(os.path.dirname(__file__))
 
@@ -29,9 +29,13 @@ class NetworkingApp(core.App):
         landing_zone=landing_zone,
         amazon_asn=amazon_asn)
 
-    # TGW_TGW_Attachment(self.virginia,'Virgina_to_EuroNet',
-    #   owner=self.virginia,
-    #   peer=self.ireland)
+    for owner in self.zones:
+      for peer in self.zones:
+        if owner.zone_name >= peer.zone_name:
+          continue
+
+        CreateAttachment(owner,'CreateAttachmentCall_'+ core.Stack.of(peer).region,
+          owner=owner, peer=peer)
 
   @property
   def zones(self)->List[LandingZone]:
