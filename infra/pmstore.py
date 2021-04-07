@@ -43,7 +43,7 @@ class ParameterReader(core.Construct):
           'WithDecryption':props.with_decryption,
         },
         region= props.region,
-        physical_resource_id= str(datetime.now())
+        physical_resource_id= cr.PhysicalResourceId.of(id=str(datetime.now()))
         ))
 
   @property

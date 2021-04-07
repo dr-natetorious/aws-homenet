@@ -70,7 +70,7 @@ class HomeNetVpn(core.Construct):
     super().__init__(scope, id, **kwargs)
 
     customer_gateway = ec2.CfnCustomerGateway(self,'CustomerGateway',
-      ip_address='173.54.122.113',
+      ip_address='100.8.103.189',
       bgp_asn=65000,
       type='ipsec.1',
       tags=[core.CfnTag(key='Name',value='TP-Link Vpn Router')])
