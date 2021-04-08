@@ -3,6 +3,7 @@ import os.path
 from typing import List
 from aws_cdk.core import App, Stack, Environment, Construct, NestedStack
 from infra.networking import NetworkingLayer
+from infra.subnets.resolver import ResolverSubnet
 from infra.subnets.identity import IdentitySubnet
 from infra.subnets.netstore import NetStoreSubnet
 from infra.subnets.vpn import VpnSubnet
@@ -45,11 +46,12 @@ class Virginia(LandingZone):
     super().__init__(scope, id, **kwargs)
     
     vpc = self.networking.vpc
-    VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
+    VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc).add_everything()
 
     self.identity = IdentitySubnet(self,'Identity',vpc=vpc)
     self.netstore = NetStoreSubnet(self,'NetStore', vpc=vpc)
     self.vpn = VpnSubnet(self,'Vpn',vpc=vpc, directory=self.identity.mad)
+    self.dns = ResolverSubnet(self,'Dns', vpc=vpc)
 
   @property
   def cidr_block(self)->str:
@@ -68,17 +70,21 @@ class Virginia(LandingZone):
         ec2.SubnetConfiguration(name='Public', subnet_type=ec2.SubnetType.PUBLIC, cidr_mask=28),
         ec2.SubnetConfiguration(name='Vpn-Clients', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=22),
         ec2.SubnetConfiguration(name='TGW', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28),
+        ec2.SubnetConfiguration(name='DnsResolver', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=28),
       ]
 
 class VpnLandingZone(LandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
 
+    VpcEndpointsForAWSServices(self,'VpcEndpointsForAWSServices',vpc=self.vpc).add_ssm_support()
+
   @property
   def subnet_configuration(self)->List[ec2.SubnetConfiguration]:
     return [
       ec2.SubnetConfiguration(name='Public', subnet_type= ec2.SubnetType.PUBLIC,cidr_mask=24),
       ec2.SubnetConfiguration(name='TGW', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28),
+      ec2.SubnetConfiguration(name='Bastion', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28)
     ]
 
 class Ireland(VpnLandingZone):

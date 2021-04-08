@@ -11,3 +11,4 @@ aws_cdk.aws_elasticsearch
 aws_cdk.aws_directoryservice
 aws_cdk.aws_eks
 aws_cdk.aws_acmpca
+aws_cdk.aws_route53resolver
