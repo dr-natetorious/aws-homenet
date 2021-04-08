@@ -144,9 +144,9 @@ class Chatham(core.Stack):
       tags=[core.CfnTag(key='Name',value='TP-Link Vpn Router')])
 
     vpn_gateway = ec2.CfnVPNGateway(self,'VpnGateway',
-        amazon_side_asn=64512,
-        type='ipsec.1',
-        tags=[core.CfnTag(key='Name',value='HomeNetGateway')])
+      amazon_side_asn=64512,
+      type='ipsec.1',
+      tags=[core.CfnTag(key='Name',value='HomeNetGateway')])
 
     if vpc != None:
       ec2.CfnVPCGatewayAttachment(self,'HomeNetGatewayAttachment',
