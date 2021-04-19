@@ -20,31 +20,38 @@ class BackupStrategy(core.Construct):
       description='Encryption Key for BackupStrategy')
 
     self.topic = sns.Topic(self,'Topic')
+    self.role = iam.Role(self,'Role',
+      description='Account Backup Role',
+      assumed_by= iam.ServicePrincipal(service='backup'))
 
     self.vault = backup.BackupVault(self,'Vault',
       encryption_key=self.encryption_key,
       notification_topic= self.topic,
       backup_vault_name='HomeNet_Vault',
-      # access_policy= iam.PolicyDocument(
-      #   statements=[
-      #     iam.PolicyStatement(
-      #       effect= iam.Effect.ALLOW,
-      #       actions=['backup:CopyIntoBackupVault'],
-      #       principals= [iam.ArnPrincipal('arn::iam::{}'.format(
-      #         core.Stack.of(self).account))])
-      #   ])
-    )
+      access_policy= iam.PolicyDocument(
+        statements=[
+          iam.PolicyStatement(
+            effect= iam.Effect.ALLOW,
+            resources=["*"],
+            actions=['backup:CopyIntoBackupVault'],
+            principals= [
+              iam.ArnPrincipal(arn = self.role.role_arn) 
+            ])
+        ]))
 
     self.default_plan = backup.BackupPlan(self,'DefaultPlan',
       backup_vault= self.vault,
-      backup_plan_name='Default Plan ' + region)
+      backup_plan_name='Default Plan ' + region,
+      backup_plan_rules=[
+        backup.BackupPlanRule.daily(),
+        backup.BackupPlanRule.weekly(),
+      ])
 
     self.default_plan.add_selection('SelectionPolicy',
-     resources=[
-       backup.BackupResource.from_tag("backup", "true"),
-       backup.BackupResource.from_tag("backup", "True"),
-       backup.BackupResource.from_tag("backup", "TRUE"),
-     ])
-
-    self.default_plan.add_rule(backup.BackupPlanRule.daily())
-    self.default_plan.add_rule(backup.BackupPlanRule.weekly())
+      allow_restores=True,
+      role=self.role,
+      resources=[
+        backup.BackupResource.from_tag("backup", "true"),
+        backup.BackupResource.from_tag("backup", "True"),
+        backup.BackupResource.from_tag("backup", "TRUE"),
+      ])
