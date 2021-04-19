@@ -7,6 +7,7 @@ from infra.subnets.resolver import ResolverSubnet
 from infra.subnets.identity import IdentitySubnet
 from infra.subnets.netstore import NetStoreSubnet
 from infra.subnets.vpn import VpnSubnet
+from infra.services.backup import BackupStrategy
 from infra.vpce import VpcEndpointsForAWSServices
 from aws_cdk import (
     core,
@@ -22,7 +23,9 @@ class LandingZone(Stack):
 
     self.networking = NetworkingLayer(self,self.zone_name,
       cidr=self.cidr_block,
-      subnet_configuration=self.subnet_configuration)    
+      subnet_configuration=self.subnet_configuration)
+
+    self.backup_policy = BackupStrategy(self,'Backup')
 
   @property
   def cidr_block(self)->str:
