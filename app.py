@@ -30,11 +30,16 @@ class NetworkingApp(core.App):
         landing_zone=landing_zone,
         amazon_asn=amazon_asn)
 
-    
-
   @property
   def zones(self)->List[LandingZone]:
     return [ self.virginia, self.ireland, self.tokyo, self.oregon, self.canada]
+
+  def tag_everything(self)->None:
+    for zone in self.zones:
+      tags = core.Tags.of(zone)
+      tags.add('purpose','homeNet')
+      tags.add('maintainer','nateb')
+      tags.add('backup','true')
 
 app = NetworkingApp()
 app.synth()
