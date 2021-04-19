@@ -46,7 +46,8 @@ class Virginia(LandingZone):
     super().__init__(scope, id, **kwargs)
     
     vpc = self.networking.vpc
-    VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc).add_everything()
+    VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc
+      ).add_ssm_support().add_storage_gateway()
 
     self.identity = IdentitySubnet(self,'Identity',vpc=vpc)
     self.netstore = NetStoreSubnet(self,'NetStore', vpc=vpc)

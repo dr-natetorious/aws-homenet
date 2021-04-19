@@ -48,6 +48,11 @@ class VpcEndpointsForAWSServices(core.Construct):
       'ecr.api', 'ecr.dkr'
     ])
 
+  def add_storage_gateway(self):
+    return self.add_interfaces(services=[
+      'storagegateway'
+    ])
+
   def add_everything(self):
     return self.add_interfaces(services=[
       'ssm', 'ec2messages', 'ec2',
