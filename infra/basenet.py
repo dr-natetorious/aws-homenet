@@ -145,9 +145,12 @@ class Chatham(core.Stack):
   """
   def __init__(self, scope: core.Construct, id: str,vpc:ec2.IVpc, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
+    ip_address='100.8.114.6'
+
+    core.Tags.of(self).add('Name','Chatham: '+ip_address)
 
     customer_gateway = ec2.CfnCustomerGateway(self,'CustomerGateway',
-      ip_address='100.8.103.189',
+      ip_address=ip_address,
       bgp_asn=65000,
       type='ipsec.1',
       tags=[core.CfnTag(key='Name',value='TP-Link Vpn Router')])
@@ -163,10 +166,10 @@ class Chatham(core.Stack):
         vpn_gateway_id=vpn_gateway.ref)
 
       # [net.route_table.id for net in vpc.select_subnets(subnet_group_name='Vpn').subnets]
-      routes = ec2.CfnVPNGatewayRoutePropagation(self,'VpnGatewayRouteProp',
-        route_table_ids=['rtb-08ca4caec9e6fcc65','rtb-0112514ba8d55834c'],
-        vpn_gateway_id= vpn_gateway.ref)
-      routes.add_depends_on(vpn_gateway)
+      # routes = ec2.CfnVPNGatewayRoutePropagation(self,'VpnGatewayRouteProp',
+      #   route_table_ids=['rtb-08ca4caec9e6fcc65','rtb-0112514ba8d55834c'],
+      #   vpn_gateway_id= vpn_gateway.ref)
+      # routes.add_depends_on(vpn_gateway)
     
     ec2.CfnVPNConnection(self,'Site2Site',
       customer_gateway_id=customer_gateway.ref,

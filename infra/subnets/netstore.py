@@ -16,6 +16,7 @@ class NetStoreSubnet(core.Construct):
   """
   def __init__(self, scope: core.Construct, id: str, vpc:ec2.IVpc, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
+    core.Tags.of(self).add('backup','true')
 
     self.storage_gateway_bucket = s3.Bucket(self,'StorageBucket',
       bucket_name='nbachmei.homenet.storage-gateway.'+ core.Stack.of(self).region,

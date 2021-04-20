@@ -21,7 +21,7 @@ class NetworkingApp(core.App):
     self.tokyo = Tokyo(self,'Tokyo', env=ap_ne_1)
     self.canada = Canada(self,'Canada', env=ca_central_1)
     self.oregon = Oregon(self,'Oregon', env=us_west_2)
-    self.chatham = Chatham(self,'Chatham', vpc=None, env=us_east_1)
+    self.chatham = Chatham(self,'Chatham', vpc=self.virginia.vpc, env=us_east_1)
 
     amazon_asn=64512
     for landing_zone in self.zones:
@@ -30,21 +30,9 @@ class NetworkingApp(core.App):
         landing_zone=landing_zone,
         amazon_asn=amazon_asn)
 
-    # self.tag_everything()
-
   @property
   def zones(self)->List[LandingZone]:
-    return [ self.virginia, self.ireland, self.tokyo, self.oregon, self.canada]
-
-  def tag_everything(self)->None:
-    for zone in self.zones:
-      self.tag_node(zone)
-
-  def tag_node(self,child:core.Construct)->None:
-    tags = core.Tags.of(child)
-    tags.add('purpose','homeNet')
-    tags.add('maintainer','nateb')
-    tags.add('backup','true')
+    return [ self.virginia, self.ireland, self.tokyo, self.oregon, self.canada ]
 
 app = NetworkingApp()
 app.synth()

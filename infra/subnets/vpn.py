@@ -65,6 +65,6 @@ class VpnSubnet(core.Construct):
 
     ec2.CfnClientVpnAuthorizationRule(self,'ClientAuthorization',
       authorize_all_groups=True,
-      target_network_cidr='10.0.0.0/16',
+      target_network_cidr='10.0.0.0/8',
       client_vpn_endpoint_id= endpoint.ref,
       description='Allow everyone/everywhere')
