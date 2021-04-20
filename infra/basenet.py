@@ -165,11 +165,13 @@ class Chatham(core.Stack):
         vpc_id=vpc.vpc_id,
         vpn_gateway_id=vpn_gateway.ref)
 
-      # [net.route_table.id for net in vpc.select_subnets(subnet_group_name='Vpn').subnets]
-      # routes = ec2.CfnVPNGatewayRoutePropagation(self,'VpnGatewayRouteProp',
-      #   route_table_ids=['rtb-08ca4caec9e6fcc65','rtb-0112514ba8d55834c'],
-      #   vpn_gateway_id= vpn_gateway.ref)
-      # routes.add_depends_on(vpn_gateway)
+      ec2.CfnVPNGatewayRoutePropagation(self,'PrivateGatewayRoutes',
+        route_table_ids=[net.route_table.route_table_id for net in vpc.private_subnets],
+        vpn_gateway_id= vpn_gateway.ref)
+
+      ec2.CfnVPNGatewayRoutePropagation(self,'IsolatedGatewayRoutes',
+        route_table_ids=[net.route_table.route_table_id for net in vpc.isolated_subnets],
+        vpn_gateway_id= vpn_gateway.ref)
     
     ec2.CfnVPNConnection(self,'Site2Site',
       customer_gateway_id=customer_gateway.ref,
