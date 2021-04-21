@@ -68,14 +68,14 @@ class Virginia(LandingZone):
   @property
   def subnet_configuration(self)->List[ec2.SubnetConfiguration]:
     return [
-        ec2.SubnetConfiguration(name='NetStore', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=24),
-        ec2.SubnetConfiguration(name='Identity', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=27),
-        ec2.SubnetConfiguration(name='Vpn', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=27),
-        ec2.SubnetConfiguration(name='Public', subnet_type=ec2.SubnetType.PUBLIC, cidr_mask=28),
-        ec2.SubnetConfiguration(name='Vpn-Clients', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=22),
-        ec2.SubnetConfiguration(name='TGW', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28),
-        ec2.SubnetConfiguration(name='DnsResolver', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=28),
-      ]
+      ec2.SubnetConfiguration(name='NetStore', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=24),
+      ec2.SubnetConfiguration(name='Identity', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=27),
+      ec2.SubnetConfiguration(name='Vpn', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=27),
+      ec2.SubnetConfiguration(name='Public', subnet_type=ec2.SubnetType.PUBLIC, cidr_mask=28),
+      ec2.SubnetConfiguration(name='Vpn-Clients', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=22),
+      ec2.SubnetConfiguration(name='TGW', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28),
+      ec2.SubnetConfiguration(name='DnsResolver', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=28),
+    ]
 
 class VpnLandingZone(LandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
@@ -145,8 +145,7 @@ class Chatham(core.Stack):
   """
   def __init__(self, scope: core.Construct, id: str,vpc:ec2.IVpc, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
-    ip_address='100.8.114.6'
-
+    ip_address='100.8.119.43'
     core.Tags.of(self).add('Name','Chatham: '+ip_address)
 
     customer_gateway = ec2.CfnCustomerGateway(self,'CustomerGateway',
@@ -163,18 +162,27 @@ class Chatham(core.Stack):
     if vpc != None:
       ec2.CfnVPCGatewayAttachment(self,'HomeNetGatewayAttachment',
         vpc_id=vpc.vpc_id,
-        vpn_gateway_id=vpn_gateway.ref)
+        vpn_gateway_id=vpn_gateway.ref)      
 
-      ec2.CfnVPNGatewayRoutePropagation(self,'PrivateGatewayRoutes',
-        route_table_ids=[net.route_table.route_table_id for net in vpc.private_subnets],
-        vpn_gateway_id= vpn_gateway.ref)
-
-      ec2.CfnVPNGatewayRoutePropagation(self,'IsolatedGatewayRoutes',
-        route_table_ids=[net.route_table.route_table_id for net in vpc.isolated_subnets],
+      ec2.CfnVPNGatewayRoutePropagation(self,'GatewayRoutes',
+        route_table_ids=[net.route_table.route_table_id for net in vpc.isolated_subnets.extend(vpc.private_subnets)],
         vpn_gateway_id= vpn_gateway.ref)
     
-    ec2.CfnVPNConnection(self,'Site2Site',
+    connection = ec2.CfnVPNConnection(self,'Site2Site',
       customer_gateway_id=customer_gateway.ref,
       static_routes_only=True,
       type='ipsec.1',
-      vpn_gateway_id= vpn_gateway.ref)
+      tags=[core.CfnTag(key='Name',value='Chatham')],
+      vpn_gateway_id= vpn_gateway.ref,
+      vpn_tunnel_options_specifications=[
+        ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty(
+          pre_shared_key='EYE_SEE_YOU',
+          tunnel_inside_cidr='169.254.50.92/30'),
+        ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty(
+          pre_shared_key='EYE_SEE_YOU',
+          tunnel_inside_cidr='169.254.51.92/30'),
+      ])
+
+    ec2.CfnVPNConnectionRoute(self,'RouteHomebound',
+      destination_cidr_block='192.168.0.0/16',
+      vpn_connection_id= connection.ref)
