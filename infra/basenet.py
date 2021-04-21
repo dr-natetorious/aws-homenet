@@ -43,7 +43,6 @@ class LandingZone(Stack):
   def vpc(self)->ec2.IVpc:
     return self.networking.vpc
 
-
 class Virginia(LandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
@@ -88,7 +87,7 @@ class VpnLandingZone(LandingZone):
     return [
       ec2.SubnetConfiguration(name='Public', subnet_type= ec2.SubnetType.PUBLIC,cidr_mask=24),
       ec2.SubnetConfiguration(name='TGW', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28),
-      ec2.SubnetConfiguration(name='Bastion', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28)
+      ec2.SubnetConfiguration(name='Bastion', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28),
     ]
 
 class Ireland(VpnLandingZone):
@@ -164,8 +163,18 @@ class Chatham(core.Stack):
         vpc_id=vpc.vpc_id,
         vpn_gateway_id=vpn_gateway.ref)      
 
+      networks = []
+      for net in vpc.isolated_subnets:
+        if net is None:
+          continue
+        networks.append(net)
+      for net in vpc.private_subnets:
+        if net is None:
+          continue
+        networks.append(net)
+
       ec2.CfnVPNGatewayRoutePropagation(self,'GatewayRoutes',
-        route_table_ids=[net.route_table.route_table_id for net in vpc.isolated_subnets.extend(vpc.private_subnets)],
+        route_table_ids=[net.route_table.route_table_id for net in networks],
         vpn_gateway_id= vpn_gateway.ref)
     
     connection = ec2.CfnVPNConnection(self,'Site2Site',

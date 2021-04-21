@@ -24,10 +24,12 @@ class NetworkingApp(core.App):
     self.chatham = Chatham(self,'Chatham', vpc=self.virginia.vpc, env=us_east_1)
 
     amazon_asn=64512
+    regional_gateways = {}
     for landing_zone in self.zones:
       amazon_asn+=1
-      RegionalGatewayLayer(landing_zone,'RegionalGateway',
+      regional_gateways[landing_zone] = RegionalGatewayLayer(landing_zone,'RegionalGateway',
         landing_zone=landing_zone,
+        peers = self.zones,
         amazon_asn=amazon_asn)
 
   @property
