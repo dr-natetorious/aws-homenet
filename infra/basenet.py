@@ -6,6 +6,7 @@ from infra.networking import NetworkingLayer
 from infra.subnets.resolver import ResolverSubnet
 from infra.subnets.identity import IdentitySubnet
 from infra.subnets.netstore import NetStoreSubnet
+from infra.subnets.video import VideoSubnet
 from infra.subnets.vpn import VpnSubnet
 from infra.services.backup import BackupStrategy
 from infra.vpce import VpcEndpointsForAWSServices
@@ -55,6 +56,7 @@ class Virginia(LandingZone):
     self.netstore = NetStoreSubnet(self,'NetStore', vpc=vpc)
     self.vpn = VpnSubnet(self,'Vpn',vpc=vpc, directory=self.identity.mad)
     self.dns = ResolverSubnet(self,'Dns', vpc=vpc)
+    self.video = VideoSubnet(self,'Video',vpc=vpc, subnet_group_name='Vpn-Clients')
 
   @property
   def cidr_block(self)->str:
