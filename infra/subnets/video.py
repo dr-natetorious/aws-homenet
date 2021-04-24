@@ -3,11 +3,15 @@ from aws_cdk import (
   core,
   aws_ec2 as ec2,
   aws_iam as iam,
+  aws_kms as kms,
   aws_s3 as s3,
   aws_ecs as ecs,
   aws_ecr_assets as ecr,
   aws_logs as logs,
   aws_autoscaling as autoscale,
+  aws_ssm as ssm,
+  aws_lambda as lambda_,
+  aws_ecr_assets as assets,
 )
 
 class Infra(core.Construct):
@@ -21,7 +25,7 @@ class Infra(core.Construct):
 
   def __init__(self,scope:core.Construct, id:str, vpc:ec2.IVpc, subnet_group_name:str, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
-    self.__vpc = vpc,
+    self.__vpc = vpc
     self.__subnet_group_name = subnet_group_name
 
     self.log_group = logs.LogGroup(self,'LogGroup',
@@ -29,10 +33,10 @@ class Infra(core.Construct):
       retention=logs.RetentionDays.TWO_WEEKS,
       removal_policy= core.RemovalPolicy.DESTROY)
 
-    self.container = ecs.ContainerImage.from_docker_image_asset(
-      asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
-        directory='src/video-producer',
-        repository_name='homenet-video-producer'))
+    # self.container = ecs.ContainerImage.from_docker_image_asset(
+    #   asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
+    #     directory='src/video-producer',
+    #     repository_name='homenet-video-producer'))
 
     self.bucket = s3.Bucket(self,'Bucket',
       bucket_name='nbachmei.personal.video.'+core.Stack.of(self).region,
@@ -42,6 +46,18 @@ class Infra(core.Construct):
           abort_incomplete_multipart_upload_after= core.Duration.days(1),
           expiration= core.Duration.days(90))
       ])
+
+    self.task_role = iam.Role(self,'TaskRole',
+      assumed_by=iam.ServicePrincipal(service='ecs-tasks'),
+      role_name='ecs-video-producer-task@homenet-{}'.format(core.Stack.of(self).region),
+      description='Role for VideoSubnet Tasks')
+
+    self.execution_role = iam.Role(self,'ExecutionRole',
+      assumed_by=iam.ServicePrincipal(service='ecs-tasks'),
+      role_name='ecs-video-producer-execution@homenet-{}'.format(core.Stack.of(self).region),
+      description='Role for Launching VideoSubnet Tasks')
+
+    self.bucket.grant_write(self.task_role)
 
     self.security_group = ec2.SecurityGroup(self,'SecurityGroup',
       vpc=vpc,
@@ -55,8 +71,44 @@ class Infra(core.Construct):
         'FARGATE_SPOT'
       ])
 
-class VideoProducer(core.Construct):
-  
+    self.cluster.add_capacity('DefaultCapacity',
+      instance_type= ec2.InstanceType.of(
+        instance_class= ec2.InstanceClass.BURSTABLE3,
+        instance_size=ec2.InstanceSize.NANO),
+      allow_all_outbound=True,
+      associate_public_ip_address=False,
+      min_capacity=0,
+      desired_capacity=0,
+      max_capacity=0,
+      update_type= autoscale.UpdateType.REPLACING_UPDATE,
+      vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
+
+class VideoProducerFunctions(core.Construct):
+  def __init__(self, scope: core.Construct, id: str, 
+    infra:Infra,
+    **kwargs) -> None:
+    super().__init__(scope, id, **kwargs)
+    self.__infra = infra
+
+    self.repo = assets.DockerImageAsset(self,'Repo',
+      directory='src/video-producer',
+      repository_name='homenet-video-producer')
+
+    code = lambda_.DockerImageCode.from_ecr(
+        repository=self.repo.repository,
+        tag=self.repo.image_uri.split(':')[-1])
+
+    self.function = lambda_.DockerImageFunction(self,'ContainerFunction',
+      code = code,
+      description='Python container lambda function for VideoProducer',
+      timeout= core.Duration.minutes(1),
+      tracing= lambda_.Tracing.ACTIVE,
+      vpc= infra.vpc,
+      vpc_subnets=ec2.SubnetSelection(subnet_group_name=infra.subnet_group_name),
+      security_groups=[infra.security_group]
+    )
+
+class VideoProducerService(core.Construct):
   def __init__(self, scope: core.Construct, id: str, 
     infra:Infra,
     camera_name:str,
@@ -66,26 +118,27 @@ class VideoProducer(core.Construct):
     core.Tags.of(self).add('Camera',camera_name)
 
     definition = ecs.TaskDefinition(self,'ProducerTask',
-      compatibility= ecs.Compatibility.EC2_AND_FARGATE,
-      cpu='256', memory_mib='512',
+      compatibility= ecs.Compatibility.EC2,
+      cpu='128', memory_mib='128',
+      task_role= infra.task_role,
+      execution_role= infra.execution_role,
       network_mode= ecs.NetworkMode.AWS_VPC)
 
     definition.add_container('DefaultContainer',
-      memory_reservation_mib=512,
+      memory_reservation_mib=128,
       image = infra.container,
       logging= ecs.AwsLogDriver(
-        stream_prefix='video-producer/camera_name/',
+        stream_prefix='video-producer/{}/'.format(camera_name),
         log_group=infra.log_group),
       # secrets= {
-      #   'PASSWORD': ecs.Secret.from_ssm_parameter(
-      #     parameter='/homenet/{}/video/cam{}/password'.format(
-      #       core.Stack.of(self).region,
-      #       camera))
+      #   'BASE_URI': ecs.Secret.from_ssm_parameter(
+      #       ssm.StringParameter.from_string_parameter_name(
+      #         self,'BaseUriParam',
+      #         string_parameter_name='/homenet/{}/videosubnet/camera-base-uri'.format(
+      #           core.Stack.of(self).region)))
       # },
       environment={
-        'USER': 'admin',
-        'PASSWORD': 'Password',
-        'RSTP_HOST': '192.168.0.70',
+        'SERVER_URI':'rtsp://admin:EYE_SEE_YOU@192.168.0.70/'+camera_name,
         'CAMERA':camera_name,
         'BUCKET':infra.bucket.bucket_name,
       })
@@ -94,7 +147,7 @@ class VideoProducer(core.Construct):
       service_name='homenet-producer-'+camera_name,
       task_definition= definition,
       assign_public_ip=False,
-      cluster= infra.cluster,
+      cluster= infra.cluster,      
       deployment_controller=ecs.DeploymentController(type=ecs.DeploymentControllerType.ECS),
       security_group= infra.security_group,
       vpc_subnets= ec2.SubnetSelection(subnet_group_name=infra.subnet_group_name),
@@ -109,25 +162,14 @@ class VideoSubnet(core.Construct):
 
     self.infra = Infra(self,'Infra',
       vpc=vpc,
-      subnet_group_name=subnet_group_name)    
+      subnet_group_name=subnet_group_name)
 
-    self.infra.cluster.add_capacity('DefaultCapacity',
-      instance_type= ec2.InstanceType.of(
-        instance_class= ec2.InstanceClass.BURSTABLE3,
-        instance_size=ec2.InstanceSize.SMALL),
-      allow_all_outbound=True,
-      associate_public_ip_address=False,
-      min_capacity=1,
-      desired_capacity=1,
-      max_capacity=1,
-      spot_price='1.00',
-      update_type= autoscale.UpdateType.REPLACING_UPDATE,
-      vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
+    self.compute = VideoProducerFunctions(self,'Functions',infra=self.infra)
 
-    self.cameras = {}
-    for camera in range(0,3):
-      camera_name='live'+str(camera)
-      self.cameras[camera_name] = VideoProducer(
-        self,camera_name,
-        infra=self.infra,
-        camera_name=camera_name)
+    # self.cameras = {}
+    # for camera in range(0,3):
+    #   camera_name='live'+str(camera)
+    #   self.cameras[camera_name] = VideoProducer(
+    #     self,camera_name,
+    #     infra=self.infra,
+    #     camera_name=camera_name)
