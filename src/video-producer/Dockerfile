@@ -25,7 +25,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt -t ${FUNCTION_DIR}
 
 # Setup application
-COPY app.py .
+COPY *.py .
 RUN chmod a+x app.py
 
 CMD [ "app.handler" ]

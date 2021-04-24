@@ -12,7 +12,11 @@ from aws_cdk import (
   aws_ssm as ssm,
   aws_lambda as lambda_,
   aws_ecr_assets as assets,
+  aws_events as events,
+  aws_events_targets as targets,
 )
+
+cameras=['live'+str(x) for x in range(0,3)]
 
 class Infra(core.Construct):
   @property
@@ -98,15 +102,47 @@ class VideoProducerFunctions(core.Construct):
         repository=self.repo.repository,
         tag=self.repo.image_uri.split(':')[-1])
 
-    self.function = lambda_.DockerImageFunction(self,'ContainerFunction',
+    role = iam.Role(self,'Role',
+      assumed_by=iam.ServicePrincipal(service='lambda'),
+      description='Role for RTSP Video Producer',
+      role_name='video-producer-function@homenet-{}'.format(core.Stack.of(self).region),
+      managed_policies=[
+        iam.ManagedPolicy.from_aws_managed_policy_name(
+          managed_policy_name='service-role/AWSLambdaVPCAccessExecutionRole'
+      )])
+
+    self.function = lambda_.DockerImageFunction(self,'VideoProducer',
       code = code,
+      role= role,
+      function_name='HomeNet-RTSP-VideoProducer',
       description='Python container lambda function for VideoProducer',
       timeout= core.Duration.minutes(1),
       tracing= lambda_.Tracing.ACTIVE,
       vpc= infra.vpc,
+      memory_size=128,
+      allow_all_outbound=True,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=infra.subnet_group_name),
       security_groups=[infra.security_group]
     )
+
+    infra.bucket.grant_write(role)
+
+    self.schedule = events.Schedule.rate(core.Duration.minutes(1))
+    camera_targets = [
+      targets.LambdaFunction(
+        handler=self.function,
+        event= events.RuleTargetInput.from_object({
+          'SERVER_URI':'rtsp://admin:EYE_SEE_YOU@192.168.0.70/'+camera_name,
+          'CAMERA':camera_name,
+          'BUCKET':infra.bucket.bucket_name,
+        })) for camera_name in cameras]
+
+    self.rule = events.Rule(self,'RTSP-VideoProducer',
+        description='Check for updates on HomeNet cameras: ',
+        targets=camera_targets,
+        enabled=True,
+        schedule=self.schedule,
+        rule_name='HomeNet-RTSP-VideoProducer')
 
 class VideoProducerService(core.Construct):
   def __init__(self, scope: core.Construct, id: str, 
