@@ -1,17 +1,17 @@
 # Define function directory
 ARG FUNCTION_DIR="/var/task"
-FROM python:3.9
+FROM public.ecr.aws/lambda/python:3.8
 
-RUN apt-get -y update && \
-  apt-get -y install libgl1-mesa-dev python3-opencv && \
-  apt-get -y install net-tools && \
-  apt-get install -y \
-    g++ \
-    make \
-    cmake \
-    unzip \
-    libcurl4-openssl-dev && \
-  rm -rf /var/cache/*
+RUN yum -y update && \
+  yum -y install mesa-libGL.x86_64 opencv-python.x86_64 && \
+  #yum -y install net-tools && \
+  # yum install -y \
+  #   g++ \
+  #   make \
+  #   cmake \
+  #   unzip \
+  #   libcurl4-openssl-dev && \
+  rm -rf /var/cache/yum/*
 
 # Include global arg in this stage of the build
 ARG FUNCTION_DIR
