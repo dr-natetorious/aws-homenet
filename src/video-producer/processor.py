@@ -41,7 +41,7 @@ class Producer:
 
   def process_image(self, image:Image):
     if image is None:
-      print('No frame.')
+      print('No frame, exiting early.')
       return
     
     array = BytesIO()

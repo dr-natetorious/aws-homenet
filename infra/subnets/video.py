@@ -37,10 +37,11 @@ class Infra(core.Construct):
       retention=logs.RetentionDays.TWO_WEEKS,
       removal_policy= core.RemovalPolicy.DESTROY)
 
-    # self.container = ecs.ContainerImage.from_docker_image_asset(
-    #   asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
-    #     directory='src/video-producer',
-    #     repository_name='homenet-video-producer'))
+    self.container = ecs.ContainerImage.from_docker_image_asset(
+      asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
+        directory='src/video-producer',
+        file='Dockerfile',
+        repository_name='homenet-video-producer-ecs'))
 
     self.bucket = s3.Bucket(self,'Bucket',
       bucket_name='nbachmei.personal.video.'+core.Stack.of(self).region,
@@ -81,9 +82,9 @@ class Infra(core.Construct):
         instance_size=ec2.InstanceSize.NANO),
       allow_all_outbound=True,
       associate_public_ip_address=False,
-      min_capacity=0,
-      desired_capacity=0,
-      max_capacity=0,
+      min_capacity=1,
+      desired_capacity=2,
+      max_capacity=3,
       update_type= autoscale.UpdateType.REPLACING_UPDATE,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
 
@@ -96,6 +97,7 @@ class VideoProducerFunctions(core.Construct):
 
     self.repo = assets.DockerImageAsset(self,'Repo',
       directory='src/video-producer',
+      file='Dockerfile.lambda',
       repository_name='homenet-video-producer')
 
     code = lambda_.DockerImageCode.from_ecr(
@@ -140,7 +142,7 @@ class VideoProducerFunctions(core.Construct):
     self.rule = events.Rule(self,'RTSP-VideoProducer',
         description='Check for updates on HomeNet cameras: ',
         targets=camera_targets,
-        enabled=True,
+        enabled=False,
         schedule=self.schedule,
         rule_name='HomeNet-RTSP-VideoProducer')
 
@@ -187,7 +189,7 @@ class VideoProducerService(core.Construct):
       deployment_controller=ecs.DeploymentController(type=ecs.DeploymentControllerType.ECS),
       security_group= infra.security_group,
       vpc_subnets= ec2.SubnetSelection(subnet_group_name=infra.subnet_group_name),
-      desired_count=0)
+      desired_count=1)
 
 class VideoSubnet(core.Construct):
   def __init__(self, scope: core.Construct, id: str, vpc:ec2.IVpc, subnet_group_name:str, **kwargs) -> None:
@@ -202,10 +204,10 @@ class VideoSubnet(core.Construct):
 
     self.compute = VideoProducerFunctions(self,'Functions',infra=self.infra)
 
-    # self.cameras = {}
-    # for camera in range(0,3):
-    #   camera_name='live'+str(camera)
-    #   self.cameras[camera_name] = VideoProducer(
-    #     self,camera_name,
-    #     infra=self.infra,
-    #     camera_name=camera_name)
+    self.cameras = {}
+    for camera in [2]:#range(0,3):
+      camera_name='live'+str(camera)
+      self.cameras[camera_name] = VideoProducerService(
+        self,camera_name,
+        infra=self.infra,
+        camera_name=camera_name)
