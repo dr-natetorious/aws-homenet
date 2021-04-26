@@ -4,7 +4,6 @@ from signal import signal, SIGTERM
 from processor import Producer
 from configuration import Configuration
 from json import dumps
-from pythonping import ping
 
 def shutdown(signnum, frame):
   print('Caught SIGTERM, exiting')
@@ -16,12 +15,17 @@ def handler(request, context):
   producer = Producer(config)
   producer.invoke()
 
+def friendly_sleep(secs)->None:
+  for _ in range(0,secs):
+    sleep(1)
+
 def run_continously():
   config = Configuration.from_environment()
   while(True):
     try:
+      print('Next iteration...')
       Producer(config).invoke()
-      sleep(5)
+      friendly_sleep(5)
     except Exception as error:
       print(error)
 
