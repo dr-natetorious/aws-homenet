@@ -9,7 +9,7 @@ from infra.subnets.netstore import NetStoreSubnet
 from infra.subnets.video import VideoSubnet
 from infra.subnets.vpn import VpnSubnet
 from infra.services.backup import BackupStrategyConstruct
-from infra.interfaces import ILandingZone
+from infra.interfaces import ILandingZone, IVpcLandingZone
 from infra.vpce import VpcEndpointsForAWSServices
 from aws_cdk import (
     core,
@@ -19,7 +19,7 @@ from aws_cdk import (
 
 src_root_dir = os.path.join(os.path.dirname(__file__))
 
-class LandingZone(ILandingZone):
+class VpcLandingZone(ILandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
     Tags.of(self).add('landing_zone',self.zone_name)
@@ -47,41 +47,7 @@ class LandingZone(ILandingZone):
   def vpc(self)->ec2.IVpc:
     return self.networking.vpc
 
-class HomeNet(LandingZone):
-  def __init__(self, scope:Construct, id:str, **kwargs)->None:
-    super().__init__(scope, id, **kwargs)
-    
-    vpc = self.networking.vpc
-    VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc
-      ).add_ssm_support().add_storage_gateway()
-
-    self.identity = IdentitySubnet(self,'Identity',vpc=vpc)
-    self.netstore = NetStoreSubnet(self,'NetStore', vpc=vpc)
-    self.vpn = VpnSubnet(self,'Vpn',vpc=vpc, directory=self.identity.mad)
-    # self.dns = ResolverSubnet(self,'Dns', vpc=vpc)
-    self.video = VideoSubnet(self,'Video',vpc=vpc, subnet_group_name='Vpn-Clients')
-
-  @property
-  def cidr_block(self)->str:
-    return '10.0.0.0/16'
-
-  @property
-  def zone_name(self)->str:
-    return 'DataLake'
-
-  @property
-  def subnet_configuration(self)->List[ec2.SubnetConfiguration]:
-    return [
-      ec2.SubnetConfiguration(name='NetStore', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=24),
-      ec2.SubnetConfiguration(name='Identity', subnet_type= ec2.SubnetType.ISOLATED, cidr_mask=27),
-      ec2.SubnetConfiguration(name='Vpn', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=27),
-      ec2.SubnetConfiguration(name='Public', subnet_type=ec2.SubnetType.PUBLIC, cidr_mask=28),
-      ec2.SubnetConfiguration(name='Vpn-Clients', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=22),
-      ec2.SubnetConfiguration(name='TGW', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28),
-      ec2.SubnetConfiguration(name='DnsResolver', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=28),
-    ]
-
-class Hybrid(LandingZone):
+class Hybrid(VpcLandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
     
@@ -112,10 +78,14 @@ class Hybrid(LandingZone):
       ec2.SubnetConfiguration(name='Reserved', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=19),
     ]
 
-class Chatham(core.Stack):
+class Chatham(ILandingZone):
   """
   Represents the Site-to-Site for House
   """
+  @property
+  def zone_name(self)->str:
+    raise 'Chatham'
+
   def __init__(self, scope: core.Construct, id: str,vpc:ec2.IVpc, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
     ip_address='100.8.119.43'
