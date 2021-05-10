@@ -1,10 +1,15 @@
 from os import environ
 
 class Configuration:
-  def __init__(self):
-    self.__server_uri = None
-    self.__camera_name = None
-    self.__bucket = None
+  def __init__(self, server_uri=None, camera_name=None, bucket_name=None):
+    self.__server_uri = server_uri
+    self.__camera_name = camera_name
+    self.__bucket = bucket_name
+
+  def __str__(self):
+    return "Config:[{} -> {}]".format(
+      self.camera_name,
+      self.bucket_name)
 
   @property
   def server_uri(self)->str:

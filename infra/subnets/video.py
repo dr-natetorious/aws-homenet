@@ -98,9 +98,9 @@ class Infra(core.Construct):
         instance_size=ec2.InstanceSize.NANO),
       allow_all_outbound=True,
       associate_public_ip_address=False,
-      min_capacity=3,
-      desired_capacity=3,
-      max_capacity=6,
+      min_capacity=1,
+      desired_capacity=1,
+      max_capacity=2,
       update_type= autoscale.UpdateType.REPLACING_UPDATE,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
 
@@ -227,9 +227,13 @@ class VideoSubnet(core.Construct):
     self.compute = VideoProducerFunctions(self,'Functions',infra=self.infra)
 
     self.cameras = {}
-    for camera in range(0,3):
-      camera_name='live'+str(camera)
-      self.cameras[camera_name] = VideoProducerService(
-        self,camera_name,
-        infra=self.infra,
-        camera_name=camera_name)
+    # for camera in range(0,3):
+    #   camera_name='live'+str(camera)
+    #   self.cameras[camera_name] = VideoProducerService(
+    #     self,camera_name,
+    #     infra=self.infra,
+    #     camera_name=camera_name)
+    self.cameras['moonbase'] = VideoProducerService(
+      self,'MoonBase',
+      infra=self.infra,
+      camera_name='moon-base')

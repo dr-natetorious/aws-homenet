@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 import os.path
 from typing import List
-from aws_cdk.core import App, Stack, Environment, Construct, NestedStack
+from aws_cdk.core import Construct, Tags
 from infra.networking import NetworkingLayer
 from infra.subnets.resolver import ResolverSubnet
 from infra.subnets.identity import IdentitySubnet
 from infra.subnets.netstore import NetStoreSubnet
 from infra.subnets.video import VideoSubnet
 from infra.subnets.vpn import VpnSubnet
-from infra.services.backup import BackupStrategy
+from infra.services.backup import BackupStrategyConstruct
+from infra.interfaces import ILandingZone
 from infra.vpce import VpcEndpointsForAWSServices
 from aws_cdk import (
     core,
@@ -18,15 +19,17 @@ from aws_cdk import (
 
 src_root_dir = os.path.join(os.path.dirname(__file__))
 
-class LandingZone(Stack):
+class LandingZone(ILandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
+    Tags.of(self).add('landing_zone',self.zone_name)
 
     self.networking = NetworkingLayer(self,self.zone_name,
       cidr=self.cidr_block,
       subnet_configuration=self.subnet_configuration)
 
-    self.backup_policy = BackupStrategy(self,'Backup')
+    self.backup_policy = BackupStrategyConstruct(self,'Backup',
+      landing_zone=self)
 
   @property
   def cidr_block(self)->str:
@@ -44,7 +47,7 @@ class LandingZone(Stack):
   def vpc(self)->ec2.IVpc:
     return self.networking.vpc
 
-class Virginia(LandingZone):
+class HomeNet(LandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
     
@@ -55,7 +58,7 @@ class Virginia(LandingZone):
     self.identity = IdentitySubnet(self,'Identity',vpc=vpc)
     self.netstore = NetStoreSubnet(self,'NetStore', vpc=vpc)
     self.vpn = VpnSubnet(self,'Vpn',vpc=vpc, directory=self.identity.mad)
-    self.dns = ResolverSubnet(self,'Dns', vpc=vpc)
+    # self.dns = ResolverSubnet(self,'Dns', vpc=vpc)
     self.video = VideoSubnet(self,'Video',vpc=vpc, subnet_group_name='Vpn-Clients')
 
   @property
@@ -78,23 +81,15 @@ class Virginia(LandingZone):
       ec2.SubnetConfiguration(name='DnsResolver', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=28),
     ]
 
-class VpnLandingZone(LandingZone):
+class Hybrid(LandingZone):
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
-
-    VpcEndpointsForAWSServices(self,'VpcEndpointsForAWSServices',vpc=self.vpc).add_ssm_support()
-
-  @property
-  def subnet_configuration(self)->List[ec2.SubnetConfiguration]:
-    return [
-      ec2.SubnetConfiguration(name='Public', subnet_type= ec2.SubnetType.PUBLIC,cidr_mask=24),
-      ec2.SubnetConfiguration(name='TGW', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28),
-      ec2.SubnetConfiguration(name='Bastion', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=28),
-    ]
-
-class Ireland(VpnLandingZone):
-  def __init__(self, scope:Construct, id:str, **kwargs)->None:
-    super().__init__(scope, id, **kwargs)
+    
+    vpc = self.networking.vpc
+    
+    # Add endpoints...
+    #vpce = VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
+    #vpce.add_ssm_support()
 
   @property
   def cidr_block(self)->str:
@@ -102,43 +97,20 @@ class Ireland(VpnLandingZone):
 
   @property
   def zone_name(self)->str:
-    return 'Ireland'  
-
-class Tokyo(VpnLandingZone):
-  def __init__(self, scope:Construct, id:str, **kwargs)->None:
-    super().__init__(scope, id, **kwargs)
+    return 'Hybrid'
 
   @property
-  def cidr_block(self)->str:
-    return '10.20.0.0/16'
-
-  @property
-  def zone_name(self)->str:
-    return 'Tokyo'
-
-class Canada(VpnLandingZone):
-  def __init__(self, scope:Construct, id:str, **kwargs)->None:
-    super().__init__(scope, id, **kwargs)
-
-  @property
-  def cidr_block(self)->str:
-    return '10.30.0.0/16'
-
-  @property
-  def zone_name(self)->str:
-    return 'Canada'
-
-class Oregon(VpnLandingZone):
-  def __init__(self, scope:Construct, id:str, **kwargs)->None:
-    super().__init__(scope, id, **kwargs)
-
-  @property
-  def cidr_block(self)->str:
-    return '10.40.0.0/16'
-
-  @property
-  def zone_name(self)->str:
-    return 'Oregon'
+  def subnet_configuration(self)->List[ec2.SubnetConfiguration]:
+    return [      
+      # 16k addresses x 2 AZ
+      ec2.SubnetConfiguration(name='Default', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=18),
+      
+      # 8k addresses x 2 AZ
+      ec2.SubnetConfiguration(name='Public', subnet_type=ec2.SubnetType.PUBLIC, cidr_mask=19),
+      
+      # 8k addresses x 2 AZ
+      ec2.SubnetConfiguration(name='Reserved', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=19),
+    ]
 
 class Chatham(core.Stack):
   """

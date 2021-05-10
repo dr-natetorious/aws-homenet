@@ -26,25 +26,25 @@ class NetworkingLayer(core.Construct):
       nat_gateways=1,
       subnet_configuration=subnet_configuration)
 
-    ssm.CfnParameter(self,'VpcId',
-      name='/homenet/{}/vpc/id'.format(id),
-      value=self.vpc.vpc_id,
-      type='String')
+    # ssm.CfnParameter(self,'VpcId',
+    #   name='/homenet/{}/vpc/id'.format(id),
+    #   value=self.vpc.vpc_id,
+    #   type='String')
 
-    ssm.CfnParameter(self,'Cidr',
-      name='/homenet/{}/vpc/cidr'.format(id),
-      value=self.vpc.vpc_cidr_block,
-      type='String')
+    # ssm.CfnParameter(self,'Cidr',
+    #   name='/homenet/{}/vpc/cidr'.format(id),
+    #   value=self.vpc.vpc_cidr_block,
+    #   type='String')
 
-    ssm.CfnParameter(self,'RegionVpcId',
-      name='/homenet/{}/vpc/id'.format(core.Stack.of(self).region),
-      value=self.vpc.vpc_id,
-      type='String')
+    # ssm.CfnParameter(self,'RegionVpcId',
+    #   name='/homenet/{}/vpc/id'.format(core.Stack.of(self).region),
+    #   value=self.vpc.vpc_id,
+    #   type='String')
 
-    ssm.CfnParameter(self,'RegionCidr',
-      name='/homenet/{}/vpc/cidr'.format(core.Stack.of(self).region),
-      value=self.vpc.vpc_cidr_block,
-      type='String')
+    # ssm.CfnParameter(self,'RegionCidr',
+    #   name='/homenet/{}/vpc/cidr'.format(core.Stack.of(self).region),
+    #   value=self.vpc.vpc_cidr_block,
+    #   type='String')
 
 class VpcPeeringConnection(core.Construct):
   """

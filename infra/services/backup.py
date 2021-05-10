@@ -1,4 +1,5 @@
 from typing import List
+from infra.interfaces import ILandingZone
 from aws_cdk import (
     core,
     aws_backup as backup,
@@ -7,10 +8,10 @@ from aws_cdk import (
     aws_sns as sns,
 )
 
-class BackupStrategy(core.Construct):
-  def __init__(self, scope:core.Construct, id:str, **kwargs):
+class BackupStrategyConstruct(core.Construct):
+  def __init__(self, scope:core.Construct, id:str, landing_zone:ILandingZone, **kwargs):
     """
-    Configure Dns Resolver
+    Landing Zone Backup Policy
     """
     super().__init__(scope,id, **kwargs)
 
@@ -27,7 +28,7 @@ class BackupStrategy(core.Construct):
     self.vault = backup.BackupVault(self,'Vault',
       encryption_key=self.encryption_key,
       notification_topic= self.topic,
-      backup_vault_name='HomeNet_Vault',
+      backup_vault_name='{}-Backup-Vault'.format(landing_zone.zone_name),
       access_policy= iam.PolicyDocument(
         statements=[
           iam.PolicyStatement(
@@ -41,7 +42,7 @@ class BackupStrategy(core.Construct):
 
     self.default_plan = backup.BackupPlan(self,'DefaultPlan',
       backup_vault= self.vault,
-      backup_plan_name='Default Plan ' + region,
+      backup_plan_name='Default Plan {} in {}'.format(landing_zone.zone_name, region),
       backup_plan_rules=[
         backup.BackupPlanRule.daily(),
         backup.BackupPlanRule.weekly(),
@@ -51,7 +52,5 @@ class BackupStrategy(core.Construct):
       allow_restores=True,
       role=self.role,
       resources=[
-        backup.BackupResource.from_tag("backup", "true"),
-        backup.BackupResource.from_tag("backup", "True"),
-        backup.BackupResource.from_tag("backup", "TRUE"),
+        backup.BackupResource.from_tag("landing_zone", landing_zone.zone_name),
       ])
