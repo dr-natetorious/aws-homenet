@@ -14,7 +14,7 @@ class NetworkingApp(core.App):
 
     # Main setup
     self.hybrid = Hybrid(self,'HomeNet-Hybrid', env=us_east_1)
-    self.chatham = None # Chatham(self,'Chatham', vpc=self.virginia.vpc, env=us_east_1)
+    self.chatham = Chatham(self,'HomeNet-Chatham', vpc=self.hybrid.vpc, env=us_east_1)
 
   @property
   def zones(self)->List[ILandingZone]:

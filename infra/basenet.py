@@ -88,8 +88,8 @@ class Hybrid(LandingZone):
     vpc = self.networking.vpc
     
     # Add endpoints...
-    #vpce = VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
-    #vpce.add_ssm_support()
+    vpce = VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
+    vpce.add_ssm_support()
 
   @property
   def cidr_block(self)->str:
@@ -114,7 +114,7 @@ class Hybrid(LandingZone):
 
 class Chatham(core.Stack):
   """
-  Establish the vpn connection
+  Represents the Site-to-Site for House
   """
   def __init__(self, scope: core.Construct, id: str,vpc:ec2.IVpc, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
@@ -130,26 +130,35 @@ class Chatham(core.Stack):
     vpn_gateway = ec2.CfnVPNGateway(self,'VpnGateway',
       amazon_side_asn=64512,
       type='ipsec.1',
-      tags=[core.CfnTag(key='Name',value='HomeNetGateway')])
+      tags=[core.CfnTag(key='Name',value='HomeNet-Gateway')])
 
     if vpc != None:
-      ec2.CfnVPCGatewayAttachment(self,'HomeNetGatewayAttachment',
+      attachment = ec2.CfnVPCGatewayAttachment(self,'HomeNetGatewayAttachment',
         vpc_id=vpc.vpc_id,
         vpn_gateway_id=vpn_gateway.ref)      
 
       networks = []
+      # Reserved
       for net in vpc.isolated_subnets:
         if net is None:
           continue
         networks.append(net)
+      # Default
       for net in vpc.private_subnets:
         if net is None:
           continue
         networks.append(net)
+      # Public
+      for net in vpc.public_subnets:
+        if net is None:
+          continue
+        networks.append(net)
 
-      ec2.CfnVPNGatewayRoutePropagation(self,'GatewayRoutes',
+      routes = ec2.CfnVPNGatewayRoutePropagation(self,'GatewayRoutes',
         route_table_ids=[net.route_table.route_table_id for net in networks],
         vpn_gateway_id= vpn_gateway.ref)
+
+      routes.add_depends_on(attachment)
     
     connection = ec2.CfnVPNConnection(self,'Site2Site',
       customer_gateway_id=customer_gateway.ref,
