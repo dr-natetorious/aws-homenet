@@ -4,7 +4,7 @@ from typing import List
 from aws_cdk.core import Construct, Tags
 from infra.networking import NetworkingLayer
 from infra.subnets.resolver import ResolverSubnet
-from infra.subnets.identity import IdentitySubnet
+from infra.subnets.identity import DirectoryServicesConstruct
 from infra.subnets.netstore import NetStoreSubnet
 from infra.subnets.video import VideoSubnet
 from infra.subnets.vpn import VpnSubnet
@@ -19,7 +19,19 @@ from aws_cdk import (
 
 src_root_dir = os.path.join(os.path.dirname(__file__))
 
-class VpcLandingZone(ILandingZone):
+class LandingZone(ILandingZone):
+  def __init__(self, scope:Construct, id:str, **kwargs)->None:
+    super().__init__(scope, id, **kwargs)
+    Tags.of(self).add('landing_zone',self.zone_name)
+
+  @property
+  def zone_name(self)->str:
+    raise NotImplementedError()
+
+class VpcLandingZone(LandingZone):
+  """
+  Represents a deployment environment with VPC
+  """
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
     Tags.of(self).add('landing_zone',self.zone_name)
@@ -33,21 +45,29 @@ class VpcLandingZone(ILandingZone):
 
   @property
   def cidr_block(self)->str:
-    raise NotImplementedError()
-
-  @property
-  def zone_name(self)->str:
-    raise NotImplementedError()
+    raise NotImplementedError()  
 
   @property
   def subnet_configuration(self)->List[ec2.SubnetConfiguration]:
-    raise NotImplementedError()
+    return [      
+      # 16k addresses x 2 AZ
+      ec2.SubnetConfiguration(name='Default', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=18),
+      
+      # 8k addresses x 2 AZ
+      ec2.SubnetConfiguration(name='Public', subnet_type=ec2.SubnetType.PUBLIC, cidr_mask=19),
+      
+      # 8k addresses x 2 AZ
+      ec2.SubnetConfiguration(name='Reserved', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=19),
+    ]
 
   @property
   def vpc(self)->ec2.IVpc:
     return self.networking.vpc
 
 class Hybrid(VpcLandingZone):
+  """
+  Represents the default landing environment for HomeNet Hybrid
+  """
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
     
@@ -65,18 +85,31 @@ class Hybrid(VpcLandingZone):
   def zone_name(self)->str:
     return 'Hybrid'
 
+
+class CoreServices(VpcLandingZone):
+  """
+  Represents dedicated environment with shared services
+  This avoids lengthy deployments and reduces costs
+  """
+  def __init__(self, scope:Construct, id:str, **kwargs)->None:
+    super().__init__(scope, id, **kwargs)
+    
+    vpc = self.networking.vpc
+    
+    # Add endpoints...
+    vpce = VpcEndpointsForAWSServices(self,'Endpoints',vpc=vpc)
+    vpce.add_ssm_support()
+
+    # Add services...
+    DirectoryServicesConstruct(self,'Identity',landing_zone=self,subnet_group_name='Default')
+
   @property
-  def subnet_configuration(self)->List[ec2.SubnetConfiguration]:
-    return [      
-      # 16k addresses x 2 AZ
-      ec2.SubnetConfiguration(name='Default', subnet_type=ec2.SubnetType.PRIVATE, cidr_mask=18),
-      
-      # 8k addresses x 2 AZ
-      ec2.SubnetConfiguration(name='Public', subnet_type=ec2.SubnetType.PUBLIC, cidr_mask=19),
-      
-      # 8k addresses x 2 AZ
-      ec2.SubnetConfiguration(name='Reserved', subnet_type=ec2.SubnetType.ISOLATED, cidr_mask=19),
-    ]
+  def cidr_block(self)->str:
+    return '10.20.0.0/16'
+
+  @property
+  def zone_name(self)->str:
+    return 'CoreSvc'
 
 class Chatham(ILandingZone):
   """
@@ -112,7 +145,7 @@ class Chatham(ILandingZone):
       for net in vpc.isolated_subnets:
         if net is None:
           continue
-        networks.append(net)
+        networks.append(net) 
       # Default
       for net in vpc.private_subnets:
         if net is None:
@@ -148,3 +181,37 @@ class Chatham(ILandingZone):
     ec2.CfnVPNConnectionRoute(self,'RouteHomebound',
       destination_cidr_block='192.168.0.0/16',
       vpn_connection_id= connection.ref)
+
+
+class VpcPeeringConnection(LandingZone):
+  """
+  Establishes a cross-vpc peering
+  """
+  def __init__(self, scope: core.Construct, id: str, vpc_id:str, peer_vpc_id:str,peer_region:str, **kwargs) -> None:
+    super().__init__(scope, id, **kwargs)
+
+    owner = ec2.Vpc.from_lookup(self,'OwnerVpc',vpc_id=vpc_id)
+    peer = ec2.Vpc.from_lookup(self,'PeerVpc', vpc_id=peer_vpc_id)
+
+    self.peering = ec2.CfnVPCPeeringConnection(self,'PeerConnection',
+      peer_region=peer_region,# core.Stack.of(peer).region,
+      peer_vpc_id= peer_vpc_id,# peer.vpc_id,
+      vpc_id=vpc_id)
+
+    # Add route from owner to the peer
+    for iter in owner.private_subnets:
+      ec2.CfnRoute(self,iter.subnet_id,
+        route_table_id=iter.route_table.route_table_id,
+        destination_cidr_block=peer.vpc_cidr_block,
+        vpc_peering_connection_id= self.peering.ref)
+
+    # Add route from peer to owner
+    for iter in peer.private_subnets:
+      ec2.CfnRoute(self,iter.subnet_id,
+        route_table_id=iter.route_table.route_table_id,
+        destination_cidr_block=owner.vpc_cidr_block,
+        vpc_peering_connection_id= self.peering.ref)
+
+  @property
+  def zone_name(self) -> str:
+      return 'Peering'

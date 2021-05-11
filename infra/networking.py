@@ -46,21 +46,6 @@ class NetworkingLayer(core.Construct):
     #   value=self.vpc.vpc_cidr_block,
     #   type='String')
 
-class VpcPeeringConnection(core.Construct):
-  """
-  Establishes a cross-vpc peering
-  """
-  def __init__(self, scope: core.Construct, id: str, peer_name:str, vpc:ec2.IVpc, peer_vpc_id:str,peer_region:str, **kwargs) -> None:
-    super().__init__(scope, id, **kwargs)
-
-    self.peering = ec2.CfnVPCPeeringConnection(scope,'Peer/'+peer_name,
-      peer_region=peer_region,# core.Stack.of(peer).region,
-      peer_vpc_id= peer_vpc_id,# peer.vpc_id,
-      vpc_id=vpc.vpc_id,
-      tags=[
-        core.CfnTag(key='Name',value='Peer('+peer_name+')')
-      ])
-
 class TransitGatewayLayer(core.Construct):
   def __init__(self, scope: core.Construct, id: str, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)

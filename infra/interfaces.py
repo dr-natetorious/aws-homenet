@@ -6,6 +6,9 @@ from aws_cdk import (
 )
 
 class ILandingZone(Stack):
+  """
+  Represents an interface into a deployment environment.
+  """
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
  
@@ -15,6 +18,9 @@ class ILandingZone(Stack):
 
 
 class IVpcLandingZone(ILandingZone):
+  """
+  Represents an interface into a deployment environment with Vpc.
+  """
   def __init__(self, scope:Construct, id:str, **kwargs)->None:
     super().__init__(scope, id, **kwargs)
 
