@@ -4,8 +4,6 @@ from aws_cdk import (
     core,
     aws_ec2 as ec2,
     aws_iam as iam,
-    aws_ssm as ssm,
-    aws_directoryservice as ds,
 )
 
 
@@ -24,10 +22,17 @@ class JumpBoxConstruct(core.Construct):
       vpc= landing_zone.vpc,
       allow_all_outbound=True)
 
-    self.security_group.add_ingress_rule(
-      peer= ec2.Peer.ipv4('100.8.119.0/24'),
-      connection= ec2.Port.tcp(3389),
-      description='Laptop VPN')
+    # Configure firewall...
+    for rule in ('100.8.119.0/24', '10.0.0.0/8','192.168.0.0/16'):
+      self.security_group.add_ingress_rule(
+        peer= ec2.Peer.ipv4(rule),
+        connection= ec2.Port.all_traffic(),
+        description='Grant any from '+rule)
+
+      self.security_group.add_ingress_rule(
+        peer= ec2.Peer.ipv4(rule),
+        connection= ec2.Port.all_icmp(),
+        description='Grant icmp from '+rule)
 
     role = iam.Role(self,'Role',
       assumed_by=iam.ServicePrincipal(
@@ -38,7 +43,7 @@ class JumpBoxConstruct(core.Construct):
         iam.ManagedPolicy.from_aws_managed_policy_name('AmazonSSMDirectoryServiceAccess'),
       ])
 
-    self.instance = ec2.Instance(self,'DevInstance',
+    self.instance = ec2.Instance(self,'Instance',
       role= role,
       vpc= landing_zone.vpc,
       key_name= key_pair_name,

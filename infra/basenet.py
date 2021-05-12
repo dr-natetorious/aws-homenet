@@ -2,7 +2,7 @@
 from infra.subnets.jumpbox import JumpBoxConstruct
 import os.path
 from typing import List
-from aws_cdk.core import Construct, Tags
+from aws_cdk.core import Construct, Environment, Stack, Tags
 from infra.networking import NetworkingLayer
 from infra.subnets.resolver import ResolverSubnet
 from infra.subnets.identity import DirectoryServicesConstruct
@@ -190,7 +190,7 @@ class Chatham(ILandingZone):
       vpn_connection_id= connection.ref)
 
 
-class VpcPeeringConnection(LandingZone):
+class VpcPeeringOwner(LandingZone):
   """
   Establishes a cross-vpc peering
   """
@@ -212,4 +212,20 @@ class VpcPeeringConnection(LandingZone):
 
   @property
   def zone_name(self) -> str:
-      return 'Peering'
+    return 'Peering'
+
+class VpcPeeringReceiver(LandingZone):
+  def __init__(self, scope: core.Construct, id: str, vpc_id:str, peer_vpc_id:str,owner_cidr:str, vpc_peering_connection_id:str, **kwargs) -> None:
+    super().__init__(scope, id, **kwargs)
+
+    # Add route from owner to the peer
+    peer = ec2.Vpc.from_lookup(self,'PeerVpc',vpc_id=peer_vpc_id)
+    for iter in peer.private_subnets:
+      ec2.CfnRoute(self, iter.subnet_id,
+        route_table_id=iter.route_table.route_table_id,
+        destination_cidr_block=owner_cidr,
+        vpc_peering_connection_id= vpc_peering_connection_id)
+
+  @property
+  def zone_name(self) -> str:
+    return 'Hybrid-Receiver'
