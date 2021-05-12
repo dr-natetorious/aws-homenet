@@ -17,7 +17,6 @@ class JoinDomainConstruct(core.Construct):
   def __init__(self, scope: core.Construct, id: str, mad:ad.CfnMicrosoftAD, targets:List[str], **kwargs) -> None:
     super().__init__(scope, id, **kwargs)  
     self.__mad = mad
-    self.cert_auth.add_depends_on(self.mad)
 
     document_name='JoinDomain_'+self.mad.ref
     self.domain_join_document = ssm.CfnDocument(self,'JoinDomainDocument',
@@ -80,3 +79,6 @@ class DirectoryServicesConstruct(core.Construct):
         state='VW',
         organization='HomeNet',
         locality='virtual.world'))
+
+    self.cert_auth.add_depends_on(self.mad)
+    JoinDomainConstruct(self,'JoinDomain', mad=self.mad, targets=[self.mad.name, self.mad.short_name])

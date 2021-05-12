@@ -21,11 +21,12 @@ class NetworkingApp(core.App):
     self.chatham = Chatham(self,'HomeNet-Chatham', vpc=self.hybrid.vpc, env=us_east_1)
 
     # Link the Vpcs...
-    self.vpc_peering = VpcPeeringConnection(self,'HomeNet-PeerCoreHybrid',
-      vpc_id='vpc-0e10050cc2d4bd007', #self.core_svc.vpc,
+    self.vpc_peering = VpcPeeringConnection(self,'HomeNet-Peering',
+      vpc_id='vpc-0cd3a7c3f73ecae29', #self.core_svc.vpc,
       peer_vpc_id= 'vpc-0b0841e660b52b9b9', #self.hybrid.vpc.vpc_id,
+      peer_cidr= '10.10.0.0/16', #self.hybrid.vpc.vpc_cidr_block
       peer_region=us_east_1.region,
-      env=us_east_1)
+      env=us_east_2)
 
 
   @property

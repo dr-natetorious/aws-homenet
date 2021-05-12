@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from infra.subnets.jumpbox import JumpBoxConstruct
 import os.path
 from typing import List
 from aws_cdk.core import Construct, Tags
@@ -77,6 +78,9 @@ class Hybrid(VpcLandingZone):
     vpce = VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
     vpce.add_ssm_support()
 
+    # Add JumpBox
+    JumpBoxConstruct(self,'DevBox',landing_zone=self)
+
   @property
   def cidr_block(self)->str:
     return '10.10.0.0/16'
@@ -102,6 +106,9 @@ class CoreServices(VpcLandingZone):
 
     # Add services...
     DirectoryServicesConstruct(self,'Identity',landing_zone=self,subnet_group_name='Default')
+
+    # Add JumpBox
+    JumpBoxConstruct(self,'DevBox',landing_zone=self)
 
   @property
   def cidr_block(self)->str:
@@ -187,12 +194,10 @@ class VpcPeeringConnection(LandingZone):
   """
   Establishes a cross-vpc peering
   """
-  def __init__(self, scope: core.Construct, id: str, vpc_id:str, peer_vpc_id:str,peer_region:str, **kwargs) -> None:
+  def __init__(self, scope: core.Construct, id: str, vpc_id:str, peer_vpc_id:str,peer_region:str,peer_cidr:str, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
 
     owner = ec2.Vpc.from_lookup(self,'OwnerVpc',vpc_id=vpc_id)
-    peer = ec2.Vpc.from_lookup(self,'PeerVpc', vpc_id=peer_vpc_id)
-
     self.peering = ec2.CfnVPCPeeringConnection(self,'PeerConnection',
       peer_region=peer_region,# core.Stack.of(peer).region,
       peer_vpc_id= peer_vpc_id,# peer.vpc_id,
@@ -200,16 +205,9 @@ class VpcPeeringConnection(LandingZone):
 
     # Add route from owner to the peer
     for iter in owner.private_subnets:
-      ec2.CfnRoute(self,iter.subnet_id,
+      ec2.CfnRoute(self, iter.subnet_id,
         route_table_id=iter.route_table.route_table_id,
-        destination_cidr_block=peer.vpc_cidr_block,
-        vpc_peering_connection_id= self.peering.ref)
-
-    # Add route from peer to owner
-    for iter in peer.private_subnets:
-      ec2.CfnRoute(self,iter.subnet_id,
-        route_table_id=iter.route_table.route_table_id,
-        destination_cidr_block=owner.vpc_cidr_block,
+        destination_cidr_block=peer_cidr,
         vpc_peering_connection_id= self.peering.ref)
 
   @property
