@@ -21,7 +21,7 @@ class NetworkingApp(core.App):
     self.chatham = Chatham(self,'HomeNet-Chatham', vpc=self.hybrid.vpc, env=us_east_1)
 
     # Link the Vpcs...
-    self.vpc_peering = VpcPeeringOwner(self,'HomeNet-Peering',
+    VpcPeeringOwner(self,'HomeNet-Peering',
       vpc_id='vpc-0cd3a7c3f73ecae29', #self.core_svc.vpc,
       peer_vpc_id= 'vpc-0b0841e660b52b9b9', #self.hybrid.vpc.vpc_id,
       peer_cidr= '10.10.0.0/16', #self.hybrid.vpc.vpc_cidr_block
@@ -34,6 +34,8 @@ class NetworkingApp(core.App):
       owner_cidr='10.20.0.0/16',
       vpc_peering_connection_id= 'pcx-06e27708a9c1d190b',   #self.vpc_peering.peering.ref,
       env=us_east_1)
+
+    # Deploy Identity Policy
 
   @property
   def zones(self)->List[ILandingZone]:

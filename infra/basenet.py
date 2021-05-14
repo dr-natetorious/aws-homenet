@@ -4,7 +4,7 @@ import os.path
 from typing import List
 from aws_cdk.core import Construct, Environment, Stack, Tags
 from infra.networking import NetworkingLayer
-from infra.subnets.resolver import ResolverSubnet
+from infra.subnets.resolver import HostedZones, ResolverSubnet
 from infra.subnets.identity import DirectoryServicesConstruct
 from infra.subnets.netstore import NetStoreSubnet
 from infra.subnets.video import VideoSubnet
@@ -78,8 +78,13 @@ class Hybrid(VpcLandingZone):
     vpce = VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
     vpce.add_ssm_support()
 
+    # Add Authentication Layer
+    DirectoryServicesConstruct(self,'Identity',landing_zone=self,subnet_group_name='Default')
+    ResolverSubnet(self,'NameResolution', landing_zone=self, subnet_group_name='Default')
+    HostedZones(self,'HostedZones',landing_zone=self)
+
     # Add JumpBox
-    JumpBoxConstruct(self,'DevBox',landing_zone=self)
+    JumpBoxConstruct(self,'JumpBox',landing_zone=self)
 
   @property
   def cidr_block(self)->str:
@@ -88,7 +93,6 @@ class Hybrid(VpcLandingZone):
   @property
   def zone_name(self)->str:
     return 'Hybrid'
-
 
 class CoreServices(VpcLandingZone):
   """
@@ -105,10 +109,10 @@ class CoreServices(VpcLandingZone):
     vpce.add_ssm_support()
 
     # Add services...
-    DirectoryServicesConstruct(self,'Identity',landing_zone=self,subnet_group_name='Default')
+    #DirectoryServicesConstruct(self,'Identity',landing_zone=self,subnet_group_name='Default')
 
     # Add JumpBox
-    JumpBoxConstruct(self,'DevBox',landing_zone=self)
+    #JumpBoxConstruct(self,'DevBox',landing_zone=self)
 
   @property
   def cidr_block(self)->str:
@@ -128,7 +132,7 @@ class Chatham(ILandingZone):
 
   def __init__(self, scope: core.Construct, id: str,vpc:ec2.IVpc, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
-    ip_address='100.8.119.43'
+    ip_address='72.88.152.62'
     core.Tags.of(self).add('Name','Chatham: '+ip_address)
 
     customer_gateway = ec2.CfnCustomerGateway(self,'CustomerGateway',

@@ -1,6 +1,5 @@
 from typing import List
 from infra.interfaces import IVpcLandingZone
-from infra.vpce import VpcEndpointsForAWSServices
 from aws_cdk import (
   core,
   aws_ec2 as ec2,
@@ -18,7 +17,7 @@ class JoinDomainConstruct(core.Construct):
     super().__init__(scope, id, **kwargs)  
     self.__mad = mad
 
-    document_name='JoinDomain_'+self.mad.ref
+    document_name='Join_HomeNet_Domain_'+self.mad.ref
     self.domain_join_document = ssm.CfnDocument(self,'JoinDomainDocument',
       name= document_name,
       content={
@@ -29,7 +28,7 @@ class JoinDomainConstruct(core.Construct):
             "properties": {
               "directoryId": self.mad.ref,
               "directoryName": "virtual.world",
-              "dnsIpAddresses": [ self.mad.attr_dns_ip_addresses ]
+              "dnsIpAddresses": self.mad.attr_dns_ip_addresses
             }
           }
         }
@@ -63,22 +62,26 @@ class DirectoryServicesConstruct(core.Construct):
       password=self.password,
       short_name='virtualworld',
       enable_sso=False,
-      edition= 'Standard',
+      edition= 'Enterprise',
       vpc_settings= ad.CfnMicrosoftAD.VpcSettingsProperty(
         vpc_id= vpc.vpc_id,
         subnet_ids= vpc.select_subnets(subnet_group_name=subnet_group_name).subnet_ids
       ))
+
+    JoinDomainConstruct(self,'JoinDomain', mad=self.mad, targets=[self.mad.name, self.mad.short_name])
+
+class CertificateAuthority(core.Construct):
+  def __init__(self, scope: core.Construct, id: str, common_name:str='cert.virtual.world', **kwargs) -> None:
+    super().__init__(scope, id, **kwargs)
+    core.Tags.of(self).add('Owner',DirectoryServicesConstruct.__name__)
 
     self.cert_auth = ca.CfnCertificateAuthority(self,'CertAuth',
       key_algorithm='RSA_2048',
       signing_algorithm='SHA256WITHRSA',
       type='ROOT',
       subject=ca.CfnCertificateAuthority.SubjectProperty(
-        common_name='cert.virtual.world',
+        common_name=common_name,
         country='US',
-        state='VW',
+        state='NJ',
         organization='HomeNet',
         locality='virtual.world'))
-
-    self.cert_auth.add_depends_on(self.mad)
-    JoinDomainConstruct(self,'JoinDomain', mad=self.mad, targets=[self.mad.name, self.mad.short_name])
