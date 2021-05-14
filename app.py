@@ -32,7 +32,7 @@ class NetworkingApp(core.App):
       vpc_id='vpc-0cd3a7c3f73ecae29', #self.core_svc.vpc,
       peer_vpc_id= 'vpc-0b0841e660b52b9b9', #self.hybrid.vpc.vpc_id,
       owner_cidr='10.20.0.0/16',
-      vpc_peering_connection_id= 'pcx-06e27708a9c1d190b', #self.vpc_peering.peering.ref,
+      vpc_peering_connection_id= 'pcx-06e27708a9c1d190b',   #self.vpc_peering.peering.ref,
       env=us_east_1)
 
   @property

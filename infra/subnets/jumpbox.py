@@ -23,16 +23,21 @@ class JumpBoxConstruct(core.Construct):
       allow_all_outbound=True)
 
     # Configure firewall...
-    for rule in ('100.8.119.0/24', '10.0.0.0/8','192.168.0.0/16'):
+    for address in ('100.8.119.0/24', '10.0.0.0/8','192.168.0.0/16'):
       self.security_group.add_ingress_rule(
-        peer= ec2.Peer.ipv4(rule),
+        peer= ec2.Peer.ipv4(address),
         connection= ec2.Port.all_traffic(),
-        description='Grant any from '+rule)
+        description='Grant any from '+address)
 
       self.security_group.add_ingress_rule(
-        peer= ec2.Peer.ipv4(rule),
+        peer= ec2.Peer.ipv4(address),
         connection= ec2.Port.all_icmp(),
-        description='Grant icmp from '+rule)
+        description='Grant icmp from '+address)
+
+      self.security_group.add_ingress_rule(
+        peer= ec2.Peer.ipv4(address),
+        connection= ec2.Port.tcp(3389),
+        description='Grant rdp from '+address)
 
     role = iam.Role(self,'Role',
       assumed_by=iam.ServicePrincipal(
