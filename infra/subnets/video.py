@@ -101,9 +101,9 @@ class Infra(core.Construct):
         instance_size=ec2.InstanceSize.NANO),
       allow_all_outbound=True,
       associate_public_ip_address=False,
-      min_capacity=1,
-      desired_capacity=1,
-      max_capacity=2,
+      min_capacity=2,
+      desired_capacity=2,
+      max_capacity=3,
       update_type= autoscale.UpdateType.REPLACING_UPDATE,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
 
@@ -200,8 +200,7 @@ class VideoProducerService(core.Construct):
       #           core.Stack.of(self).region)))
       # },
       environment={
-        'SERVER_URI':'rtsp://admin:EYE_SEE_YOU@192.168.0.70/'+camera_name,
-        'CAMERA':camera_name,
+        'SERVER_URI':'admin:EYE_SEE_YOU@192.168.0.70',
         'BUCKET':infra.bucket.bucket_name,
       })
 
@@ -224,7 +223,7 @@ class VideoSubnet(core.Construct):
       landing_zone= landing_zone,
       subnet_group_name=subnet_group_name)
 
-    self.compute = VideoProducerFunctions(self,'Functions',infra=self.infra)
+    #self.compute = VideoProducerFunctions(self,'Functions',infra=self.infra)
     self.moon_base = VideoProducerService(
       self,'MoonBase',
       infra=self.infra,

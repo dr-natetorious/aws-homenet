@@ -1,5 +1,6 @@
 #!/usr/local/bin/python3
 import threading
+from os import environ
 from time import sleep
 from signal import signal, SIGTERM
 from processor import Producer
@@ -32,13 +33,19 @@ def run_continously(config:Configuration=None):
     except Exception as error:
       print(error)
 
+def get_value(key:str):
+  value = environ.get(key)
+  if value == None or len(str(value)) == 0:
+    raise ValueError('Missing env: '+key)
+  return value
+
 def run_multi_threaded():
   threads = []
   for camera_name in ['live'+str(x) for x in range(0,3)]:
     config = Configuration(
-      server_uri= 'rtsp://admin:EYE_SEE_YOU@192.168.0.70/'+camera_name,
+      server_uri= "rtsp://{}/{}".format(get_value('SERVER_URI'),camera_name),
       camera_name= camera_name,
-      bucket_name='nbachmei.personal.video.us-east-1')
+      bucket_name= get_value('BUCKET'))
 
     thread = threading.Thread(target=run_continously, args=(config,))
     threads.append(thread)

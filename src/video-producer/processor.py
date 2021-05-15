@@ -85,7 +85,10 @@ class Producer:
     image.save(array, format='PNG')
 
     dt = datetime.now()
-    key = 'eufy/{}/{}.png'.format(self.config.camera_name,dt.strftime('%Y/%m/%d/%H/%M.%S.%f'))
+    key = 'eufy/{}/{}.png'.format(
+      self.config.camera_name,
+      dt.strftime('%Y/%m/%d/%H/%M/%S.%f'))
+      
     try:
       s3.put_object(
         Bucket=self.config.bucket_name,
@@ -97,7 +100,7 @@ class Producer:
           'Month': str(dt.month),
         })
 
-      print('Wrote Frame {}: {}'.format(key, image))
+      print('Wrote Frame s3://{}/{}: {}'.format(self.config.bucket_name, key, image))
     except Exception as error:
       print('Unable to write frame: '+error)
 
