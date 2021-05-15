@@ -15,6 +15,13 @@ class HostedZones(core.Construct):
       vpc=landing_zone.vpc,
       comment='Primary domain name')
 
+  def add_virtual_world_alias(self, name, target):
+    r53.CnameRecord(self,name,
+      domain_name=target,
+      zone = self.virtual_world,
+      record_name=name,
+      ttl=core.Duration.minutes(5))
+
 class ResolverSubnet(core.Construct):
   def __init__(self, scope:core.Construct, id:str, landing_zone:IVpcLandingZone,subnet_group_name:str='Default', **kwargs):
     """

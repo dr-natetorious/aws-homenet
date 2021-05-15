@@ -12,7 +12,7 @@ StorageGatewayImage = ec2.MachineImage.generic_linux(
 
 class NetStoreSubnet(core.Construct):
   """
-  Configure the datalake layer
+  Configure an AWS Storage Gateway.
   """
   def __init__(self, scope: core.Construct, id: str, vpc:ec2.IVpc, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)

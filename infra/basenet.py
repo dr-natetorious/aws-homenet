@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from infra.subnets.fs import NetworkFileSystems
 from infra.subnets.jumpbox import JumpBoxConstruct
 import os.path
 from typing import List
@@ -29,7 +30,7 @@ class LandingZone(ILandingZone):
   def zone_name(self)->str:
     raise NotImplementedError()
 
-class VpcLandingZone(LandingZone):
+class VpcLandingZone(IVpcLandingZone):
   """
   Represents a deployment environment with VPC
   """
@@ -43,6 +44,40 @@ class VpcLandingZone(LandingZone):
 
     self.backup_policy = BackupStrategyConstruct(self,'Backup',
       landing_zone=self)
+
+    self.security_group = ec2.SecurityGroup(self,'SecurityGroup',
+      description='Default-SG for {} landing zone'.format(self.zone_name),
+      vpc= self.vpc,
+      allow_all_outbound=True)
+    
+    for address in ('72.88.152.62/24', '10.0.0.0/8','192.168.0.0/16'):
+      self.security_group.add_ingress_rule(
+        peer= ec2.Peer.ipv4(address),
+        connection= ec2.Port.all_traffic(),
+        description='Grant any from '+address)
+
+      self.security_group.add_ingress_rule(
+        peer= ec2.Peer.ipv4(address),
+        connection= ec2.Port.all_icmp(),
+        description='Grant icmp from '+address)
+
+      self.security_group.add_ingress_rule(
+        peer= ec2.Peer.ipv4(address),
+        connection= ec2.Port.tcp(3389),
+        description='Grant rdp from '+address)
+
+      self.security_group.add_ingress_rule(
+        peer= ec2.Peer.ipv4(address),
+        connection= ec2.Port.tcp(22),
+        description='Grant ssh from '+address)
+
+  @property
+  def security_group(self) -> ec2.SecurityGroup:
+    return self.__security_group
+
+  @security_group.setter
+  def security_group(self,value) -> ec2.SecurityGroup:
+    self.__security_group = value
 
   @property
   def cidr_block(self)->str:
@@ -78,10 +113,18 @@ class Hybrid(VpcLandingZone):
     vpce = VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
     vpce.add_ssm_support()
 
-    # Add Authentication Layer
-    DirectoryServicesConstruct(self,'Identity',landing_zone=self,subnet_group_name='Default')
-    ResolverSubnet(self,'NameResolution', landing_zone=self, subnet_group_name='Default')
-    HostedZones(self,'HostedZones',landing_zone=self)
+    # Add Core Services
+    ds = DirectoryServicesConstruct(self,'Identity',landing_zone=self)
+    hosts = HostedZones(self,'HostedZones',landing_zone=self)
+
+    ResolverSubnet(self,'NameResolution', landing_zone=self)    
+
+    # Add filesystems...
+    nfs = NetworkFileSystems(self,'NetFs',landing_zone=self, ds=ds)
+    nfs.add_alias(hosts.virtual_world)
+
+    # Add app-level services...
+    VideoSubnet(self,'Cameras', landing_zone=self)
 
     # Add JumpBox
     JumpBoxConstruct(self,'JumpBox',landing_zone=self)

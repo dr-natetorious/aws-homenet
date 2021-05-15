@@ -35,3 +35,7 @@ class IVpcLandingZone(ILandingZone):
   @property
   def vpc(self)->ec2.IVpc:
     raise NotImplementedError()
+
+  @property
+  def security_group(self)->ec2.SecurityGroup:
+    raise NotImplementedError()

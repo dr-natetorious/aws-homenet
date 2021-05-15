@@ -17,28 +17,6 @@ class JumpBoxConstruct(core.Construct):
     # Only required for debugging the jumpbox
     key_pair_name = None #'nbachmei.personal.'+core.Stack.of(self).region
 
-    self.security_group = ec2.SecurityGroup(self,'SecurityGroup',
-      description='JumpBox Security Group', 
-      vpc= landing_zone.vpc,
-      allow_all_outbound=True)
-
-    # Configure firewall...
-    for address in ('72.88.152.62/24', '10.0.0.0/8','192.168.0.0/16'):
-      self.security_group.add_ingress_rule(
-        peer= ec2.Peer.ipv4(address),
-        connection= ec2.Port.all_traffic(),
-        description='Grant any from '+address)
-
-      self.security_group.add_ingress_rule(
-        peer= ec2.Peer.ipv4(address),
-        connection= ec2.Port.all_icmp(),
-        description='Grant icmp from '+address)
-
-      self.security_group.add_ingress_rule(
-        peer= ec2.Peer.ipv4(address),
-        connection= ec2.Port.tcp(3389),
-        description='Grant rdp from '+address)
-
     role = iam.Role(self,'Role',
       assumed_by=iam.ServicePrincipal(
         service='ec2',
@@ -57,7 +35,7 @@ class JumpBoxConstruct(core.Construct):
         instance_size=ec2.InstanceSize.SMALL),
       allow_all_outbound=True,
       user_data_causes_replacement=True,
-      security_group= self.security_group,
+      security_group= landing_zone.security_group,
       vpc_subnets= ec2.SubnetSelection(subnet_group_name='Default'),
       machine_image= ec2.MachineImage.generic_windows(ami_map={
         'us-east-1': 'ami-0f93c815788872c5d',
@@ -65,4 +43,5 @@ class JumpBoxConstruct(core.Construct):
         'eu-west-1': 'ami-03b9a7c8f0fc1808e',
         'us-west-2': 'ami-0b7ebdd52b84c244d',
       }))
+
     core.Tags.of(self.instance).add('domain','virtual.world')

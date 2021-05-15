@@ -32,6 +32,8 @@ class Configuration:
 
   @staticmethod
   def from_environment():
+    print('from_environment')
+    
     result = Configuration()
     result.__server_uri = Configuration.__get_setting('SERVER_URI') #'rtsp://admin:EYE_SEE_YOU@192.168.0.70/live2'#get_setting('RTSP_URI')
     result.__camera_name =Configuration.__get_setting('CAMERA')

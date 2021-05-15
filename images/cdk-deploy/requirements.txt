@@ -13,3 +13,4 @@ aws_cdk.aws_eks
 aws_cdk.aws_acmpca
 aws_cdk.aws_route53resolver
 aws_cdk.aws_backup
+aws_cdk.aws_fsx

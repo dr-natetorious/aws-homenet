@@ -1,4 +1,4 @@
-from infra.vpce import VpcEndpointsForAWSServices
+from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,
   aws_ec2 as ec2,
@@ -28,16 +28,19 @@ sudo systemctl status amazon-ssm-agent
 
 class Infra(core.Construct):
   @property
+  def landing_zone(self)->IVpcLandingZone:
+    return self.__landing_zone
+  @property
   def vpc(self)->ec2.IVpc:
-    return self.__vpc
+    return self.__landing_zone.__vpc
 
   @property
   def subnet_group_name(self)->str:
     return self.__subnet_group_name
 
-  def __init__(self,scope:core.Construct, id:str, vpc:ec2.IVpc, subnet_group_name:str, **kwargs) -> None:
+  def __init__(self,scope:core.Construct, id:str, landing_zone:IVpcLandingZone, subnet_group_name:str='Default', **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
-    self.__vpc = vpc
+    self.__landing_zone = landing_zone
     self.__subnet_group_name = subnet_group_name
 
     self.log_group = logs.LogGroup(self,'LogGroup',
@@ -56,7 +59,7 @@ class Infra(core.Construct):
       topic_name='HomeNet-Frame-Uploaded')
 
     self.bucket = s3.Bucket(self,'Bucket',
-      bucket_name='nbachmei.personal.video.'+core.Stack.of(self).region,
+      bucket_name='nbachmei.personal.video.v2.'+core.Stack.of(self).region,
       removal_policy= core.RemovalPolicy.DESTROY,
       lifecycle_rules=[
         s3.LifecycleRule(
@@ -81,12 +84,12 @@ class Infra(core.Construct):
     self.bucket.grant_write(self.task_role)
 
     self.security_group = ec2.SecurityGroup(self,'SecurityGroup',
-      vpc=vpc,
+      vpc=self.landing_zone.vpc,
       allow_all_outbound=True,
       description='VideoSubnet Components')
 
     self.cluster = ecs.Cluster(self,'Cluster',
-      vpc=vpc,
+      vpc=self.landing_zone.vpc,
       cluster_name='nbachmei-personal-video-'+core.Stack.of(self).region,
       capacity_providers=[
         'FARGATE_SPOT'
@@ -115,7 +118,6 @@ class VideoProducerFunctions(core.Construct):
     infra:Infra,
     **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
-    self.__infra = infra
 
     self.repo = assets.DockerImageAsset(self,'Repo',
       directory='src/video-producer',
@@ -142,7 +144,7 @@ class VideoProducerFunctions(core.Construct):
       description='Python container lambda function for VideoProducer',
       timeout= core.Duration.minutes(1),
       tracing= lambda_.Tracing.ACTIVE,
-      vpc= infra.vpc,
+      vpc= infra.landing_zone.vpc,
       memory_size=128,
       allow_all_outbound=True,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=infra.subnet_group_name),
@@ -214,26 +216,16 @@ class VideoProducerService(core.Construct):
       desired_count=1)
 
 class VideoSubnet(core.Construct):
-  def __init__(self, scope: core.Construct, id: str, vpc:ec2.IVpc, subnet_group_name:str, **kwargs) -> None:
+  def __init__(self, scope: core.Construct, id: str, landing_zone:IVpcLandingZone, subnet_group_name:str='Default', **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
-    self.__vpc = vpc
-    self.__subnet_group_name = subnet_group_name
     core.Tags.of(self).add('Component','VideoSubnet')
 
     self.infra = Infra(self,'Infra',
-      vpc=vpc,
+      landing_zone= landing_zone,
       subnet_group_name=subnet_group_name)
 
     self.compute = VideoProducerFunctions(self,'Functions',infra=self.infra)
-
-    self.cameras = {}
-    # for camera in range(0,3):
-    #   camera_name='live'+str(camera)
-    #   self.cameras[camera_name] = VideoProducerService(
-    #     self,camera_name,
-    #     infra=self.infra,
-    #     camera_name=camera_name)
-    self.cameras['moonbase'] = VideoProducerService(
+    self.moon_base = VideoProducerService(
       self,'MoonBase',
       infra=self.infra,
       camera_name='moon-base')
