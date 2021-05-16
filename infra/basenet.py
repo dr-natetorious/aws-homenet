@@ -114,7 +114,7 @@ class Hybrid(VpcLandingZone):
     vpce.add_ssm_support()
 
     # Add Core Services...
-    
+
     ds = DirectoryServicesConstruct(self,'Identity',landing_zone=self)
     ca = CertificateAuthority(self,'Certificates', common_name='cert.virtual.world')
 
@@ -128,7 +128,7 @@ class Hybrid(VpcLandingZone):
 
     # Add app-level services...
     video = VideoSubnet(self,'Cameras', landing_zone=self)
-    video.configure_dns(hosts.virtual_world)
+    video.configure_dns(zone=hosts.virtual_world, ca=ca)
 
     # Add JumpBox
     JumpBoxConstruct(self,'JumpBox',landing_zone=self)

@@ -1,5 +1,16 @@
 from typing import List
 from os import path
+
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+
+from aws_cdk.aws_route53 import IHostedZone
+from cryptography import x509
+from cryptography.x509 import NameAttribute, NameOID
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,
@@ -7,6 +18,7 @@ from aws_cdk import (
   aws_directoryservice as ad,
   aws_acmpca as ca,
   aws_ssm as ssm,
+  aws_certificatemanager as cm,
 )
 
 cert_path = path.join(path.dirname(__file__), '../../../certs')
@@ -88,3 +100,32 @@ class CertificateAuthority(core.Construct):
         state='NJ',
         organization='HomeNet',
         locality='virtual.world'))
+
+  def create_certificate(self, domain_name:str)->ca.CfnCertificate:
+    key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend(),
+    )
+
+    filename= path.join('certs',domain_name+'.csr')
+    if not path.exists(filename):
+      csr = (x509.CertificateSigningRequestBuilder()
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, domain_name)]))
+        .sign(key, hashes.SHA256(), default_backend())
+      )
+      with open(filename, 'w+') as f:
+        f.write(csr.public_bytes(serialization.Encoding.PEM).decode())
+    
+    with open(filename, 'r') as f:
+      csr = f.read()
+
+    certificate = ca.CfnCertificate(self,domain_name,
+      certificate_authority_arn= self.cert_auth.ref,
+      signing_algorithm='SHA256WITHRSA',
+      certificate_signing_request=csr,
+      validity= ca.CfnCertificate.ValidityProperty(
+        type='YEARS',
+        value=1))
+
+    return certificate

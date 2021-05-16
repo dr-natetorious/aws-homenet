@@ -1,3 +1,4 @@
+from infra.subnets.identity import CertificateAuthority
 from infra.subnets.videos.frame_inspection import FrameInspectorConstruct
 from infra.subnets.videos.base_resources import Infra
 from infra.subnets.videos.producer_service import VideoProducerService
@@ -28,5 +29,5 @@ class VideoSubnet(core.Construct):
       subnet_group_name= subnet_group_name,
       infra= self.infra)
 
-  def configure_dns(self,zone:r53.IHostedZone)->None:
-    self.frame_inspector.configure_dns(zone)
+  def configure_dns(self,zone:r53.IHostedZone, ca:CertificateAuthority)->None:
+    self.frame_inspector.configure_dns(zone, ca)

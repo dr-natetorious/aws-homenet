@@ -2,3 +2,4 @@ __pycache__
 cdk.out
 .vscode
 cdk.context.json
+**/*.pem
