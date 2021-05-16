@@ -68,7 +68,7 @@ class NetworkFileSystems(core.Construct):
       posix_user=efs.PosixUser(gid='1000', uid='10020'),
       create_acl= efs.Acl(owner_uid='10020',owner_gid='1000',permissions='0755'))
 
-  def add_alias(self, hosts:r53.PrivateHostedZone)->None:
+  def configure_dns(self, hosts:r53.IHostedZone)->None:
     # Add efs sources...
     for entry in [('efs', self.homenet.file_system_id), ('app-data', self.app_data.file_system_id)]:
       name, target = entry

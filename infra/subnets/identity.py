@@ -1,4 +1,5 @@
 from typing import List
+from os import path
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,
@@ -7,6 +8,8 @@ from aws_cdk import (
   aws_acmpca as ca,
   aws_ssm as ssm,
 )
+
+cert_path = path.join(path.dirname(__file__), '../../../certs')
 
 class JoinDomainConstruct(core.Construct):
   @property

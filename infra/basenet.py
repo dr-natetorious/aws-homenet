@@ -6,7 +6,7 @@ from typing import List
 from aws_cdk.core import Construct, Environment, Stack, Tags
 from infra.networking import NetworkingLayer
 from infra.subnets.resolver import HostedZones, ResolverSubnet
-from infra.subnets.identity import DirectoryServicesConstruct
+from infra.subnets.identity import CertificateAuthority, DirectoryServicesConstruct
 from infra.subnets.netstore import NetStoreSubnet
 from infra.subnets.video import VideoSubnet
 from infra.subnets.vpn import VpnSubnet
@@ -113,18 +113,22 @@ class Hybrid(VpcLandingZone):
     vpce = VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
     vpce.add_ssm_support()
 
-    # Add Core Services
+    # Add Core Services...
+    
     ds = DirectoryServicesConstruct(self,'Identity',landing_zone=self)
-    hosts = HostedZones(self,'HostedZones',landing_zone=self)
+    ca = CertificateAuthority(self,'Certificates', common_name='cert.virtual.world')
 
+    # Setup name resolutions...
+    hosts = HostedZones(self,'HostedZones',landing_zone=self)
     ResolverSubnet(self,'NameResolution', landing_zone=self)    
 
     # Add filesystems...
     nfs = NetworkFileSystems(self,'NetFs',landing_zone=self, ds=ds)
-    nfs.add_alias(hosts.virtual_world)
+    nfs.configure_dns(hosts.virtual_world)
 
     # Add app-level services...
-    VideoSubnet(self,'Cameras', landing_zone=self)
+    video = VideoSubnet(self,'Cameras', landing_zone=self)
+    video.configure_dns(hosts.virtual_world)
 
     # Add JumpBox
     JumpBoxConstruct(self,'JumpBox',landing_zone=self)
