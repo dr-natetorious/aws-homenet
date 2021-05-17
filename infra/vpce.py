@@ -1,4 +1,5 @@
 from typing import List
+from infra.interfaces import IVpcEndpointsForAWSServices
 from aws_cdk import (
     aws_ec2 as ec2,
     aws_iam as iam,
@@ -6,7 +7,7 @@ from aws_cdk import (
 )
 
 
-class VpcEndpointsForAWSServices(core.Construct):
+class VpcEndpointsForAWSServices(IVpcEndpointsForAWSServices):
   """
   Configure the Vendor Application
   """
@@ -14,7 +15,6 @@ class VpcEndpointsForAWSServices(core.Construct):
     super().__init__(scope, id, **kwargs)
 
     self.vpc = vpc
-    self.interfaces = {}
 
     self.security_group = ec2.SecurityGroup(
       self, 'EndpointSecurity',
@@ -28,32 +28,37 @@ class VpcEndpointsForAWSServices(core.Construct):
         protocol=ec2.Protocol.ALL,
         string_representation='Any source'))
 
-  def add_gateways(self)->None:
-    self.gateways = {}
+  def add_gateways(self)->IVpcEndpointsForAWSServices:
     for svc in ['s3', 'dynamodb']:
       self.gateways[svc] = ec2.GatewayVpcEndpoint(
         self, svc,
         vpc=self.vpc,
         service=ec2.GatewayVpcEndpointAwsService(
           name=svc))
+    return self
 
-  def add_ssm_support(self):
+  def add_ssm_support(self)->IVpcEndpointsForAWSServices:
     return self.add_interfaces(services=[
       'ssm', 'ec2messages', 'ec2','ssmmessages','logs'
     ])
 
-  def add_lambda_support(self):
+  def add_lambda_support(self)->IVpcEndpointsForAWSServices:
     return self.add_interfaces(services=[
       'elasticfilesystem', 'lambda', 'states',
       'ecr.api', 'ecr.dkr'
     ])
 
-  def add_storage_gateway(self):
+  def add_apigateway_support(self)->IVpcEndpointsForAWSServices:
+    return self.add_interfaces(services=[
+      'execute-api'
+    ])
+
+  def add_storage_gateway(self)->IVpcEndpointsForAWSServices:
     return self.add_interfaces(services=[
       'storagegateway'
     ])
 
-  def add_everything(self):
+  def add_everything(self)->IVpcEndpointsForAWSServices:
     return self.add_interfaces(services=[
       'ssm', 'ec2messages', 'ec2',
       'ssmmessages', 'kms', 'elasticloadbalancing',
@@ -64,7 +69,7 @@ class VpcEndpointsForAWSServices(core.Construct):
       'storagegateway'
     ])
 
-  def add_interfaces(self, services:List[str]):
+  def add_interfaces(self, services:List[str])->IVpcEndpointsForAWSServices:
     for svc in services:
       if not svc in self.interfaces:
         self.interfaces[svc] = ec2.InterfaceVpcEndpoint(

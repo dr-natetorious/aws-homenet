@@ -11,7 +11,7 @@ from infra.subnets.netstore import NetStoreSubnet
 from infra.subnets.video import VideoSubnet
 from infra.subnets.vpn import VpnSubnet
 from infra.services.backup import BackupStrategyConstruct
-from infra.interfaces import ILandingZone, IVpcLandingZone
+from infra.interfaces import ILandingZone, IVpcLandingZone, IVpcEndpointsForAWSServices
 from infra.vpce import VpcEndpointsForAWSServices
 from aws_cdk import (
     core,
@@ -72,12 +72,20 @@ class VpcLandingZone(IVpcLandingZone):
         description='Grant ssh from '+address)
 
   @property
-  def security_group(self) -> ec2.SecurityGroup:
+  def security_group(self) -> ec2.ISecurityGroup:
     return self.__security_group
 
   @security_group.setter
-  def security_group(self,value) -> ec2.SecurityGroup:
+  def security_group(self,value:ec2.ISecurityGroup):
     self.__security_group = value
+
+  @property
+  def vpc_endpoints(self)->IVpcEndpointsForAWSServices:
+    return self.__vpc_e
+
+  @vpc_endpoints.setter
+  def vpc_endpoints(self, value:IVpcEndpointsForAWSServices):
+    self.__vpc_e = value
 
   @property
   def cidr_block(self)->str:
@@ -110,8 +118,9 @@ class Hybrid(VpcLandingZone):
     vpc = self.networking.vpc
     
     # Add endpoints...
-    vpce = VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
-    vpce.add_ssm_support()
+    self.vpc_endpoints = VpcEndpointsForAWSServices(self,'Endpoints',vpc=self.vpc)
+    self.vpc_endpoints.add_ssm_support()
+    self.vpc_endpoints.add_apigateway_support()
 
     # Add Core Services...
 
@@ -152,8 +161,8 @@ class CoreServices(VpcLandingZone):
     vpc = self.networking.vpc
     
     # Add endpoints...
-    vpce = VpcEndpointsForAWSServices(self,'Endpoints',vpc=vpc)
-    vpce.add_ssm_support()
+    self.vpc_endpoints = VpcEndpointsForAWSServices(self,'Endpoints',vpc=vpc)
+    self.vpc_endpoints.add_ssm_support()
 
     # Add services...
     #DirectoryServicesConstruct(self,'Identity',landing_zone=self,subnet_group_name='Default')

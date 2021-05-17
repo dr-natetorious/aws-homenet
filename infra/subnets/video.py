@@ -1,5 +1,5 @@
 from infra.subnets.identity import CertificateAuthority
-from infra.subnets.videos.frame_inspection import FrameInspectorConstruct
+from infra.subnets.videos.photos_api import PhotosApiConstruct
 from infra.subnets.videos.base_resources import Infra
 from infra.subnets.videos.producer_service import VideoProducerService
 from infra.interfaces import IVpcLandingZone
@@ -24,10 +24,10 @@ class VideoSubnet(core.Construct):
       infra=self.infra,
       camera_name='moon-base')
 
-    self.frame_inspector = FrameInspectorConstruct(self,'FrameInspector',
+    self.photos_api = PhotosApiConstruct(self,'PhotosApi',
       landing_zone = landing_zone,
       subnet_group_name= subnet_group_name,
       infra= self.infra)
 
   def configure_dns(self,zone:r53.IHostedZone, ca:CertificateAuthority)->None:
-    self.frame_inspector.configure_dns(zone, ca)
+    self.photos_api.configure_dns(zone, ca)
