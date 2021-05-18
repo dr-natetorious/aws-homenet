@@ -99,10 +99,17 @@ class Infra(core.Construct):
       instance_type= ec2.InstanceType.of(
         instance_class= ec2.InstanceClass.BURSTABLE3,
         instance_size=ec2.InstanceSize.NANO),
+      machine_image= ec2.MachineImage.generic_linux(
+        user_data=ec2.UserData.for_linux(shebang=install_ssm_script.strip()),
+        ami_map={
+          'us-east-1':'ami-0d5eff06f840b45e9',
+          'us-east-2':'ami-077e31c4939f6a2f3',
+          'us-west-2':'ami-0cf6f5c8a62fa5da6',
+      }),
       allow_all_outbound=True,
       associate_public_ip_address=False,
-      min_capacity=2,
-      desired_capacity=2,
+      min_capacity=1,
+      #desired_capacity=2,
       max_capacity=3,
       update_type= autoscale.UpdateType.REPLACING_UPDATE,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
@@ -111,4 +118,4 @@ class Infra(core.Construct):
       iam.ManagedPolicy.from_aws_managed_policy_name(
           managed_policy_name='AmazonSSMManagedInstanceCore'))
 
-    self.autoscale_group.add_user_data(install_ssm_script)
+    #self.autoscale_group.add_user_data(install_ssm_script)
