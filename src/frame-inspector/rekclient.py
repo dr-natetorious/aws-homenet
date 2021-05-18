@@ -1,9 +1,11 @@
+import logging
 import boto3
 from os import path
 from io import BytesIO
 from json import loads, dumps
 from bucket import S3Object
 from labels import LabelDocument
+from logging import Logger
 
 class RekClient:
   def __init__(self, region_name:str=None)->None:
@@ -18,25 +20,32 @@ class RekClient:
   def s3_client(self)->boto3.client:
     return self.__s3
 
-  def detect_s3_labels(self, s3_uri:str)->LabelDocument:
-    
+  def detect_s3_labels(self,logger:Logger, s3_uri:str)->LabelDocument:
     s3_object = S3Object.from_s3_uri(s3_uri)
+    logger.info('detect_s3_labels - bucket {} / key {}'.format(
+      s3_object.bucket,
+      s3_object.key))
 
     # Check if this file is already processed
     existing = self.__try_get_s3_labels(s3_object)
     if existing != None:
+      logger.info('returning existing')
       return existing
 
     # Process the image
-    response = self.rekognition_client.detect_labels(
-      MaxLabels=1000,
-      #MinConfidence=55,
-      Image={
-        'S3Object':{
-          'Bucket': s3_object.bucket,
-          'Name': s3_object.key
-        },
-      })
+    try:
+      response = self.rekognition_client.detect_labels(
+        MaxLabels=1000,
+        #MinConfidence=55,
+        Image={
+          'S3Object':{
+            'Bucket': s3_object.bucket,
+            'Name': s3_object.key
+          },
+        })
+    except Exception as err:
+      logger.error(err)
+      raise err
 
     # Persist the file
     document = LabelDocument(response)

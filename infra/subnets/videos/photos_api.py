@@ -10,6 +10,7 @@ from aws_cdk import (
   aws_lambda as lambda_,
   aws_ecr_assets as assets,
   aws_route53 as r53,
+  aws_route53_targets as dns_targets,
 )
 
 class PhotosApiConstruct(core.Construct):
@@ -39,12 +40,14 @@ class PhotosApiConstruct(core.Construct):
       )])
     infra.bucket.grant_read(role)
 
-    self.function_env = {}
+    self.function_env = {
+      'BUCKET_NAME': infra.bucket.bucket_name
+    }
     self.function = lambda_.DockerImageFunction(self,'Function',
       code = code,
       role= role,
-      function_name='HomeNet-Video-FrameInspector',
-      description='Python container lambda function for Rtsp Frame Inspection',
+      function_name='HomeNet-PhotoApi',
+      description='Python Lambda function for '+PhotosApiConstruct.__name__,
       timeout= core.Duration.seconds(30),
       tracing= lambda_.Tracing.ACTIVE,
       vpc= landing_zone.vpc,
@@ -70,8 +73,14 @@ class PhotosApiConstruct(core.Construct):
           statements=[
             iam.PolicyStatement(
               effect= iam.Effect.ALLOW,
+              actions=['execute-api:Invoke'],
               principals=[iam.AnyPrincipal()],
-              resources=['*']
+              resources=['*'],
+              conditions={
+                'IpAddress':{
+                  'aws:SourceIp': ['10.0.0.0/8','192.168.0.0/16','72.88.152.62/32']
+                }
+              }
             )
           ]
         ),
@@ -86,9 +95,8 @@ class PhotosApiConstruct(core.Construct):
   def configure_dns(self,zone:r53.IHostedZone, ca:CertificateAuthority)->None:
     # Define the Certificate
     friendly_name = 'photos-api.{}'.format(zone.zone_name)
-    # Register the Dns record...
-    r53.CnameRecord(self,'PhotosApi',
+    r53.ARecord(self,'PhotosApi',
       zone=zone,
-      domain_name= self.frontend_proxy.url.split('/')[2],
       record_name=friendly_name,
-      comment='Photos API ApiGateway')
+      target= r53.RecordTarget.from_alias(dns_targets.ApiGateway(self.frontend_proxy)))
+   

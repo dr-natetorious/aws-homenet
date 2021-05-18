@@ -2,10 +2,14 @@ import boto3
 import urllib
 from os import environ
 from json import dumps
+from botocore.retries import bucket
 from flask import request, redirect
 from rekclient import RekClient
 
-client = RekClient()
+client = RekClient(region_name='us-east-1')
+bucket_name = environ.get('BUCKET_NAME')
+if bucket_name is None:
+  bucket_name= 'nbachmei.personal.video.v2.us-east-1'
 
 def init_flask_for_env():
   """
@@ -25,8 +29,13 @@ app = init_flask_for_env()
 def hello_world():
   return 'Hello, World!'
 
-@app.route('/inspect')
-def inspect():
-  url = request.query_string.decode()
-  return url
-  #json = client.detect_s3_labels(url)
+@app.route('/inspect/<path:key>')
+def inspect(key:str):
+  labels = client.detect_s3_labels(
+    app.logger,
+    's3://{}/{}'.format(bucket_name, key))
+
+  return labels.as_dict()
+
+if __name__ == '__main__':
+  app.run(debug=True)
