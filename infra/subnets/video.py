@@ -1,7 +1,7 @@
 from infra.subnets.identity import CertificateAuthority
 from infra.subnets.videos.photos_api import PhotosApiConstruct
 from infra.subnets.videos.base_resources import Infra
-from infra.subnets.videos.producer_service import VideoProducerService
+from infra.subnets.videos.rtsp_connector_service import RtspConnectorService
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,
@@ -18,8 +18,7 @@ class VideoSubnet(core.Construct):
       landing_zone= landing_zone,
       subnet_group_name=subnet_group_name)
 
-    #self.compute = VideoProducerFunctions(self,'Functions',infra=self.infra)
-    self.moon_base = VideoProducerService(
+    self.moon_base = RtspConnectorService(
       self,'MoonBase',
       infra=self.infra,
       home_base='moon-base')

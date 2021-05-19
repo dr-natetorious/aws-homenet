@@ -6,6 +6,7 @@ from aws_cdk import (
   aws_kms as kms,
   aws_s3 as s3,
   aws_ecs as ecs,
+  aws_ecr as r,
   aws_ecr_assets as ecr,
   aws_logs as logs,
   aws_autoscaling as autoscale,
@@ -42,6 +43,19 @@ class Infra(core.Construct):
       log_group_name='/homenet/video/',
       retention=logs.RetentionDays.ONE_DAY,
       removal_policy= core.RemovalPolicy.DESTROY)
+
+    # self.rtsp_connector_repo = r.Repository(self,'RtspConnector',
+    #   image_scan_on_push=True,
+    #   repository_name='{}-rtsp-connector'.format(landing_zone.zone_name),
+    #   lifecycle_rules=[
+    #     r.LifecycleRule(max_image_count=30)
+    #   ])
+
+    # self.rtsp_container = ecs.ContainerImage.from_docker_image_asset(
+    #   asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
+    #     directory='src/rtsp-connector',
+    #     file='Dockerfile',
+    #     repository_name=self.rtsp_connector_repo.repository_name))
 
     self.container = ecs.ContainerImage.from_docker_image_asset(
       asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
@@ -98,17 +112,17 @@ class Infra(core.Construct):
       instance_type= ec2.InstanceType.of(
         instance_class= ec2.InstanceClass.BURSTABLE3,
         instance_size=ec2.InstanceSize.NANO),
-      machine_image= ec2.MachineImage.generic_linux(
-        user_data=ec2.UserData.for_linux(shebang=install_ssm_script.strip()),
-        ami_map={
-          'us-east-1':'ami-0d5eff06f840b45e9',
-          'us-east-2':'ami-077e31c4939f6a2f3',
-          'us-west-2':'ami-0cf6f5c8a62fa5da6',
-      }),
+      # machine_image= ec2.MachineImage.generic_linux(
+      #   #user_data=ec2.UserData.for_linux(shebang=install_ssm_script.strip()),
+      #   ami_map={
+      #     'us-east-1':'ami-0d5eff06f840b45e9',
+      #     'us-east-2':'ami-077e31c4939f6a2f3',
+      #     'us-west-2':'ami-0cf6f5c8a62fa5da6',
+      # }),
       allow_all_outbound=True,
       associate_public_ip_address=False,
       min_capacity=1,
-      #desired_capacity=2,
+      desired_capacity=2,
       max_capacity=3,
       update_type= autoscale.UpdateType.REPLACING_UPDATE,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))

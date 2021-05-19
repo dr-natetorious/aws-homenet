@@ -14,7 +14,7 @@ yum -y update && yum -y https://s3.us-east-1.amazonaws.com/amazon-ssm-us-east-1/
 sudo systemctl status amazon-ssm-agent
 """
 
-class VideoProducerService(core.Construct):
+class RtspConnectorService(core.Construct):
   """
   Represents an ECS service for collecting RTSP frames.
   """
@@ -25,7 +25,7 @@ class VideoProducerService(core.Construct):
     super().__init__(scope, id, **kwargs)    
     core.Tags.of(self).add('home_base',home_base)
 
-    definition = ecs.TaskDefinition(self,'ProducerTask',
+    definition = ecs.TaskDefinition(self,'DefaultTask',
       compatibility= ecs.Compatibility.EC2,
       cpu='128', memory_mib='128',
       task_role= infra.task_role,
@@ -43,7 +43,7 @@ class VideoProducerService(core.Construct):
         'BUCKET':infra.bucket.bucket_name,
       })
 
-    ecs.Ec2Service(self,'ProducerService',
+    ecs.Ec2Service(self,'RtspConnectorService',
       service_name='{}-rtsp-connector-{}'.format(infra.landing_zone.zone_name, home_base),
       task_definition= definition,
       assign_public_ip=False,
