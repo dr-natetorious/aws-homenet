@@ -9,11 +9,6 @@ from aws_cdk import (
   aws_ecr_assets as ecr,
   aws_logs as logs,
   aws_autoscaling as autoscale,
-  aws_ssm as ssm,
-  aws_lambda as lambda_,
-  aws_ecr_assets as assets,
-  aws_events as events,
-  aws_events_targets as targets,
   aws_sns as sns,
   aws_s3_notifications as s3n,
 )
@@ -54,9 +49,13 @@ class Infra(core.Construct):
         file='Dockerfile',
         repository_name='homenet-video-producer-ecs'))
 
-    self.topic = sns.Topic(self,'Topic',
-      display_name='HomeNet-Frame-Uploaded',
-      topic_name='HomeNet-Frame-Uploaded')
+    self.frameAnalyzed = sns.Topic(self,'FrameAnalyzed',
+      display_name='HomeNet-VideoFrame-Analyzed',
+      topic_name='HomeNet-VideoFrame-Analyzed')
+
+    self.frameUploaded = sns.Topic(self,'VideoFrameUploaded',
+      display_name='HomeNet-VideoFrame-Uploaded',
+      topic_name='HomeNet-VideoFrame-Uploaded')
 
     self.bucket = s3.Bucket(self,'Bucket',
       bucket_name='nbachmei.personal.video.v2.'+core.Stack.of(self).region,
@@ -69,7 +68,7 @@ class Infra(core.Construct):
 
     self.bucket.add_event_notification(
       s3.EventType.OBJECT_CREATED,
-      s3n.SnsDestination(topic=self.topic))
+      s3n.SnsDestination(topic=self.frameUploaded))
 
     self.task_role = iam.Role(self,'TaskRole',
       assumed_by=iam.ServicePrincipal(service='ecs-tasks'),
