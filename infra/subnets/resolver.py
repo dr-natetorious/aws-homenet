@@ -1,5 +1,6 @@
 from typing import List
 from infra.interfaces import IVpcLandingZone
+from json import loads
 from aws_cdk import (
     core,
     aws_ec2 as ec2,
@@ -8,27 +9,43 @@ from aws_cdk import (
 )
 
 class HostedZones(core.Construct):
+  """
+  Represents the Domain Name service records...
+  """
   def __init__(self, scope:core.Construct, id:str,landing_zone:IVpcLandingZone, **kwargs):
     super().__init__(scope,id, **kwargs)
+    
+    # Create the primary domain
     self.virtual_world = r53.PrivateHostedZone(self,'VirtualWorld',
       zone_name='virtual.world',
       vpc=landing_zone.vpc,
       comment='Primary domain name')
 
-  def add_virtual_world_alias(self, name, target):
-    r53.CnameRecord(self,name,
-      domain_name=target,
-      zone = self.virtual_world,
-      record_name=name,
-      ttl=core.Duration.minutes(5))
+    # Create the real world
+    self.real_world = r53.PrivateHostedZone(self,'RealWorld',
+      zone_name='real.world',
+      vpc=landing_zone.vpc,
+      comment='Name resolution back to physical realm')
+
+    # Add the public records...
+    with open('chatham.json','r') as f:
+      json = loads(f.read())
+      for zone in [self.real_world]:
+        for entry in json:
+          ip = entry['ip']
+          name = entry['name']
+          record_name = '{}.{}'.format(name,zone.zone_name)
+          r53.ARecord(self,record_name,
+            zone=self.real_world,
+            record_name=record_name,
+            target= r53.RecordTarget.from_ip_addresses(ip))
 
 class ResolverSubnet(core.Construct):
+  """
+  Deploys the Dns Service endpoints used by Chatham
+  """
   def __init__(self, scope:core.Construct, id:str, landing_zone:IVpcLandingZone,subnet_group_name:str='Default', **kwargs):
-    """
-    Configure Dns Resolver
-    """
     super().__init__(scope,id, **kwargs)
-
     self.sg = ec2.SecurityGroup(self,'SG',
       vpc=landing_zone.vpc,
       allow_all_outbound=True,
