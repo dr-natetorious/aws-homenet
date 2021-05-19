@@ -25,9 +25,9 @@ class VideoProducerFunctions(core.Construct):
     super().__init__(scope, id, **kwargs)
 
     self.repo = assets.DockerImageAsset(self,'Repo',
-      directory='src/video-producer',
+      directory='src/rtsp-connector',
       file='Dockerfile.lambda',
-      repository_name='homenet-video-producer')
+      repository_name='homenet-rtsp-connector')
 
     code = lambda_.DockerImageCode.from_ecr(
         repository=self.repo.repository,

@@ -45,9 +45,9 @@ class Infra(core.Construct):
 
     self.container = ecs.ContainerImage.from_docker_image_asset(
       asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
-        directory='src/video-producer',
+        directory='src/rtsp-connector',
         file='Dockerfile',
-        repository_name='homenet-video-producer-ecs'))
+        repository_name='homenet-rtsp-connector'))
 
     self.frameAnalyzed = sns.Topic(self,'FrameAnalyzed',
       display_name='HomeNet-VideoFrame-Analyzed',

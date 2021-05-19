@@ -22,9 +22,9 @@ class PhotosApiConstruct(core.Construct):
     core.Tags.of(self).add(key='Source', value= PhotosApiConstruct.__name__)
       
     self.repo = assets.DockerImageAsset(self,'Repo',
-      directory='src/frame-inspector',
+      directory='src/photo-api',
       file='Dockerfile',
-      repository_name='homenet-video-frame-inspector')
+      repository_name='homenet-video-photo-api')
 
     code = lambda_.DockerImageCode.from_ecr(
         repository=self.repo.repository,

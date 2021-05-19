@@ -22,7 +22,7 @@ class VideoSubnet(core.Construct):
     self.moon_base = VideoProducerService(
       self,'MoonBase',
       infra=self.infra,
-      camera_name='moon-base')
+      home_base='moon-base')
 
     self.photos_api = PhotosApiConstruct(self,'PhotosApi',
       landing_zone = landing_zone,
