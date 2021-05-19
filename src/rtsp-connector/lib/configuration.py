@@ -1,5 +1,11 @@
 from os import environ
 
+def get_value(key:str):
+  value = environ.get(key)
+  if value == None or len(str(value)) == 0:
+    raise ValueError('Missing env: '+key)
+  return value
+
 class Configuration:
   def __init__(self, server_uri=None, camera_name=None, bucket_name=None):
     self.server_uri = server_uri

@@ -6,6 +6,7 @@ from aws_cdk import (
   aws_ecs as ecs,
 )
 
+desired_count = 1
 cameras=['live'+str(x) for x in range(0,3)]
 
 install_ssm_script="""
@@ -41,6 +42,9 @@ class RtspConnectorService(core.Construct):
       environment={
         'SERVER_URI':'admin:EYE_SEE_YOU@192.168.0.70',
         'BUCKET':infra.bucket.bucket_name,
+        'FRAME_ANALYZED_TOPIC': infra.frameAnalyzed.topic_arn,
+        'REK_COLLECT_ID': 'homenet-hybrid-collection',
+        'REGION':core.Stack.of(self).region,
       })
 
     ecs.Ec2Service(self,'RtspConnectorService',
@@ -51,4 +55,4 @@ class RtspConnectorService(core.Construct):
       deployment_controller=ecs.DeploymentController(type=ecs.DeploymentControllerType.ECS),
       security_group= infra.security_group,
       vpc_subnets= ec2.SubnetSelection(subnet_group_name=infra.subnet_group_name),
-      desired_count=1)
+      desired_count=desired_count)
