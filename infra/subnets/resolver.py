@@ -28,6 +28,7 @@ class HostedZones(core.Construct):
       comment='Name resolution back to physical realm')
 
     # Add the public records...
+    # https://abram.com.au/converting-pem-to-pfx-certificates/
     with open('chatham.json','r') as f:
       json = loads(f.read())
       for zone in [self.real_world]:
