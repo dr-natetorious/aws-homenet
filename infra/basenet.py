@@ -50,16 +50,16 @@ class VpcLandingZone(IVpcLandingZone):
       vpc= self.vpc,
       allow_all_outbound=True)
     
+    self.security_group.add_ingress_rule(
+        peer= ec2.Peer.any_ipv4(),
+        connection= ec2.Port.all_icmp(),
+        description='Grant icmp from anywhere')
+
     for address in ('72.88.152.62/24', '10.0.0.0/8','192.168.0.0/16'):
       self.security_group.add_ingress_rule(
         peer= ec2.Peer.ipv4(address),
         connection= ec2.Port.all_traffic(),
-        description='Grant any from '+address)
-
-      self.security_group.add_ingress_rule(
-        peer= ec2.Peer.ipv4(address),
-        connection= ec2.Port.all_icmp(),
-        description='Grant icmp from '+address)
+        description='Grant any from '+address)  
 
       self.security_group.add_ingress_rule(
         peer= ec2.Peer.ipv4(address),

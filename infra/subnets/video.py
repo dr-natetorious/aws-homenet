@@ -1,3 +1,5 @@
+from infra.subnets.videos.time_stream import TimeStreamConstruct
+from infra.subnets.videos.rtsp_persist_people import RtspPersistPeopleFunction
 from infra.subnets.identity import CertificateAuthority
 from infra.subnets.videos.photos_api import PhotosApiConstruct
 from infra.subnets.videos.base_resources import Infra
@@ -18,6 +20,9 @@ class VideoSubnet(core.Construct):
       landing_zone= landing_zone,
       subnet_group_name=subnet_group_name)
 
+    self.time_stream = TimeStreamConstruct(self,'TimeStream',
+      landing_zone=landing_zone)
+
     self.moon_base = RtspConnectorService(
       self,'MoonBase',
       infra=self.infra,
@@ -26,6 +31,9 @@ class VideoSubnet(core.Construct):
     self.photos_api = PhotosApiConstruct(self,'PhotosApi',
       landing_zone = landing_zone,
       subnet_group_name= subnet_group_name,
+      infra= self.infra)
+
+    self.persist_people = RtspPersistPeopleFunction(self,'PersistPpl',
       infra= self.infra)
 
   def configure_dns(self,zone:r53.IHostedZone, ca:CertificateAuthority)->None:

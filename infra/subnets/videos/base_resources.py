@@ -44,19 +44,6 @@ class Infra(core.Construct):
       retention=logs.RetentionDays.ONE_DAY,
       removal_policy= core.RemovalPolicy.DESTROY)
 
-    # self.rtsp_connector_repo = r.Repository(self,'RtspConnector',
-    #   image_scan_on_push=True,
-    #   repository_name='{}-rtsp-connector'.format(landing_zone.zone_name),
-    #   lifecycle_rules=[
-    #     r.LifecycleRule(max_image_count=30)
-    #   ])
-
-    # self.rtsp_container = ecs.ContainerImage.from_docker_image_asset(
-    #   asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
-    #     directory='src/rtsp-connector',
-    #     file='Dockerfile',
-    #     repository_name=self.rtsp_connector_repo.repository_name))
-
     self.container = ecs.ContainerImage.from_docker_image_asset(
       asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
         directory='src/rtsp-connector',
@@ -101,10 +88,13 @@ class Infra(core.Construct):
     self.bucket.grant_write(self.task_role)
     self.frameAnalyzed.grant_publish(self.task_role)
 
-    self.security_group = ec2.SecurityGroup(self,'SecurityGroup',
-      vpc=self.landing_zone.vpc,
-      allow_all_outbound=True,
-      description='VideoSubnet Components')
+    self.security_group = landing_zone.security_group
+    
+    # ec2.SecurityGroup(self,'SecurityGroup',
+    #   vpc=self.landing_zone.vpc,
+    #   allow_all_outbound=True,
+    #   description='VideoSubnet Components')
+
 
     self.cluster = ecs.Cluster(self,'Cluster',
       vpc=self.landing_zone.vpc,
@@ -116,7 +106,7 @@ class Infra(core.Construct):
     self.autoscale_group = self.cluster.add_capacity('DefaultCapacity',
       instance_type= ec2.InstanceType.of(
         instance_class= ec2.InstanceClass.BURSTABLE3,
-        instance_size=ec2.InstanceSize.NANO),
+        instance_size=ec2.InstanceSize.SMALL),
       allow_all_outbound=True,
       associate_public_ip_address=False,
       min_capacity=1,
