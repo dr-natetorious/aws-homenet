@@ -35,7 +35,7 @@ class Infra(core.Construct):
     return self.__subnet_group_name
 
   def __init__(self,scope:core.Construct, id:str, landing_zone:IVpcLandingZone, subnet_group_name:str='Default', **kwargs) -> None:
-    super().__init__(scope, id, **kwargs)
+    super().__init__(scope, id, **kwargs)    
     self.__landing_zone = landing_zone
     self.__subnet_group_name = subnet_group_name
 
@@ -89,24 +89,19 @@ class Infra(core.Construct):
     self.frameAnalyzed.grant_publish(self.task_role)
 
     self.security_group = landing_zone.security_group
-    
-    # ec2.SecurityGroup(self,'SecurityGroup',
-    #   vpc=self.landing_zone.vpc,
-    #   allow_all_outbound=True,
-    #   description='VideoSubnet Components')
-
 
     self.cluster = ecs.Cluster(self,'Cluster',
       vpc=self.landing_zone.vpc,
-      cluster_name='nbachmei-personal-video-'+core.Stack.of(self).region,
-      capacity_providers=[
-        'FARGATE_SPOT'
-      ])
+      cluster_name='nbachmei-personal-video-'+core.Stack.of(self).region)
+    core.Tags.of(self.cluster).add('domain','virtual.world')
 
     self.autoscale_group = self.cluster.add_capacity('DefaultCapacity',
       instance_type= ec2.InstanceType.of(
         instance_class= ec2.InstanceClass.BURSTABLE3,
         instance_size=ec2.InstanceSize.SMALL),
+      machine_image= ec2.MachineImage.generic_windows(ami_map={
+        'us-east-1':'ami-0be6f09264f372d7a',
+      }),
       allow_all_outbound=True,
       associate_public_ip_address=False,
       min_capacity=1,
@@ -115,8 +110,9 @@ class Infra(core.Construct):
       update_type= autoscale.UpdateType.REPLACING_UPDATE,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
 
-    self.autoscale_group.role.add_managed_policy(
-      iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='AmazonSSMManagedInstanceCore'))
+    for policy in ['AmazonSSMDirectoryServiceAccess','AmazonSSMManagedInstanceCore']:
+      self.autoscale_group.role.add_managed_policy(
+        iam.ManagedPolicy.from_aws_managed_policy_name(
+          managed_policy_name=policy))
 
     #self.autoscale_group.add_user_data(install_ssm_script)
