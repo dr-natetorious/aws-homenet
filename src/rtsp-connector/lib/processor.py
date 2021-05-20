@@ -1,4 +1,5 @@
 from os import environ
+from time import sleep
 from lib.configuration import Configuration, get_value
 from rtsp import Client
 from PIL import Image
@@ -15,6 +16,7 @@ region_name = get_value('REGION')
 analyzed_frame_topic_arn = get_value('FRAME_ANALYZED_TOPIC')
 frame_size=(1920,1080)
 sampling = 0.005
+delay_time_secs = 10
 
 s3 = boto3.client('s3', region_name=region_name)
 sns = boto3.client('sns',region_name=region_name)
@@ -49,7 +51,9 @@ class Producer:
       image = client.read()
       while True:
         try:
-          self.process_image(image)
+          if self.process_image(image):
+            sleep(delay_time_secs)
+
           image = client.read()
         except Exception as e:
           print(e)
@@ -59,13 +63,14 @@ class Producer:
 
     return { 'Status': 'OK'}
 
-  def process_image(self, image:Image):
+  def process_image(self, image:Image) -> bool:
+    has_processed_frame = False 
     if not include_sample():
-      return
+      return has_processed_frame
     
     if image is None:
       print('No frame to write, skipping.')
-      return
+      return has_processed_frame
 
     array = BytesIO()
     image.save(array, format='PNG')
@@ -89,9 +94,12 @@ class Producer:
           'Month': str(dt.month),
         })
       print('Wrote Frame {}: {}'.format(s3_object.s3_uri, image))
+
+      # Record that we actually got a valid frame and uploaded it.
+      has_processed_frame = True
     except Exception as error:
       print('Unable to write frame: '+error)
-      return
+      return has_processed_frame
 
     # Analyze the frame
     try:
@@ -99,7 +107,7 @@ class Producer:
         s3_object=s3_object)
     except Exception as error:
       print('Unable to DetectLabels in {} - {}'.format(s3_object.s3_uri, error))
-      return
+      return has_processed_frame
 
     # Find any faces within the document
     try:
@@ -126,11 +134,12 @@ class Producer:
                 'StringValue':'true'
               },
             })
-        print(response)
+          print(response)
     except Exception as error:
       print('Unable to DetectFaces in {} - {}'.format(s3_object.s3_uri, error))
-      return
+      return has_processed_frame
 
+    return has_processed_frame
 
   # def capture_video(self, client:Client)->None:
   #   print('capture_video entered')

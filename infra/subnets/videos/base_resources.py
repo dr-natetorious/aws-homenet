@@ -1,4 +1,5 @@
 from infra.interfaces import IVpcLandingZone
+from json import loads
 from aws_cdk import (
   core,
   aws_ec2 as ec2,
@@ -11,6 +12,7 @@ from aws_cdk import (
   aws_logs as logs,
   aws_autoscaling as autoscale,
   aws_sns as sns,
+  aws_ssm as ssm,
   aws_s3_notifications as s3n,
 )
 
@@ -95,18 +97,23 @@ class Infra(core.Construct):
       cluster_name='nbachmei-personal-video-'+core.Stack.of(self).region)
     core.Tags.of(self.cluster).add('domain','virtual.world')
 
+    #win_ami_param = ssm.StringParameter.from_string_parameter_name(self,'WindowsAmiParameter',
+    #  string_parameter_name='/aws/service/ami-windows-latest/Windows_Server-1909-English-Core-ECS_Optimized/image_id')
+
+
     self.autoscale_group = self.cluster.add_capacity('DefaultCapacity',
       instance_type= ec2.InstanceType.of(
         instance_class= ec2.InstanceClass.BURSTABLE3,
         instance_size=ec2.InstanceSize.SMALL),
       machine_image= ec2.MachineImage.generic_windows(ami_map={
-        'us-east-1':'ami-0be6f09264f372d7a',
+        'us-east-1':'ami-00e5e4bfacd58146c',
+        #core.Stack.of(self).region: win_ami_param.string_value,
       }),
       allow_all_outbound=True,
       associate_public_ip_address=False,
       min_capacity=1,
       #desired_capacity=2,
-      max_capacity=3,
+      max_capacity=2,
       update_type= autoscale.UpdateType.REPLACING_UPDATE,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
 
