@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 #from infra.subnets.artifacts import ArtifactsConstruct
+from infra.subnets.artifacts import ArtifactsConstruct
 from infra.subnets.fs import NetworkFileSystems
 from infra.subnets.jumpbox import JumpBoxConstruct
 import os.path
@@ -291,17 +292,18 @@ class VpcPeeringReceiver(LandingZone):
   def zone_name(self) -> str:
     return 'Hybrid-Receiver'
 
-# class Artifactory(LandingZone):
-#   def __init__(self, scope: core.Construct, id: str, domain_name:str, **kwargs) -> None:
-#     super().__init__(scope, id, **kwargs)
+class Artifactory(LandingZone):
+  def __init__(self, scope: core.Construct, id: str, domain_name:str='virtual.world', **kwargs) -> None:
+    super().__init__(scope, id, **kwargs)
 
-#     self.code_artifacts = ArtifactsConstruct(self,'CodeArtifacts',
-#       landing_zone=self)
+    zone = r53.HostedZone.from_lookup(self,'HostedZone',
+      domain_name=domain_name,
+      private_zone=True)
 
-#     # zone = r53.HostedZone.from_lookup(self,'HostedZone',
-#     #   domain_name=domain_name)
-#     #self.code_artifacts.configure_dns(zone=zone)
+    self.code_artifacts = ArtifactsConstruct(self,'CodeArtifacts',
+      landing_zone=self,
+      zone= zone)
 
-#   @property
-#   def zone_name(self) -> str:
-#       return 'artifacts'
+  @property
+  def zone_name(self) -> str:
+    return 'artifacts'

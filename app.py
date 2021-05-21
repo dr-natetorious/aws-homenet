@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-from infra.subnets.artifacts import ArtifactsConstruct
 import os.path
 from typing import List
 from aws_cdk import core
 from infra.interfaces  import ILandingZone
-from infra.basenet import Chatham, CoreServices, Hybrid, VpcPeeringOwner, VpcPeeringReceiver
+from infra.basenet import Chatham, CoreServices, Hybrid, VpcPeeringOwner, VpcPeeringReceiver, Artifactory
 src_root_dir = os.path.join(os.path.dirname(__file__))
 
 us_east_1 = core.Environment(region="us-east-1", account='581361757134')
@@ -15,7 +14,7 @@ class NetworkingApp(core.App):
     super().__init__(**kwargs)
 
     # Deploy code artifacts and cicd...
-    #self.artifacts = ArtifactsConstruct(self,)
+    self.artifacts = Artifactory(self,'HomeNet-Artifacts', env=us_east_1)
 
     # Deploy core services
     self.core_svc = CoreServices(self,'HomeNet-CoreSvc', env=us_east_2)
