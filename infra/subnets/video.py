@@ -1,3 +1,4 @@
+from infra.subnets.videos.rtsp_connector import RtspConnectorConstruct
 from infra.subnets.videos.time_stream import TimeStreamConstruct
 from infra.subnets.videos.rtsp_persist_people import RtspPersistPeopleFunction
 from infra.subnets.identity import CertificateAuthority
@@ -26,6 +27,10 @@ class VideoSubnet(core.Construct):
     self.moon_base = RtspConnectorService(
       self,'MoonBase',
       infra=self.infra,
+      home_base='moon-base')
+
+    self.rtsp_connector = RtspConnectorConstruct(self,'RtspConnector',
+      landing_zone=landing_zone,
       home_base='moon-base')
 
     self.photos_api = PhotosApiConstruct(self,'PhotosApi',

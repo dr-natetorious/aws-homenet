@@ -1,5 +1,5 @@
 from typing import List
-from infra.interfaces import ILandingZone
+from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
     core,
     aws_ec2 as ec2,
@@ -8,7 +8,7 @@ from aws_cdk import (
 
 
 class JumpBoxConstruct(core.Construct):
-  def __init__(self, scope:core.Construct, id:str, landing_zone:ILandingZone, **kwargs):
+  def __init__(self, scope:core.Construct, id:str, landing_zone:IVpcLandingZone, **kwargs):
     """
     Configure Dns Resolver
     """
@@ -37,11 +37,15 @@ class JumpBoxConstruct(core.Construct):
       user_data_causes_replacement=True,
       security_group= landing_zone.security_group,
       vpc_subnets= ec2.SubnetSelection(subnet_group_name='Default'),
-      machine_image= ec2.MachineImage.generic_windows(ami_map={
-        'us-east-1': 'ami-0f93c815788872c5d',
-        'us-east-2': 'ami-0b697c4ae566cad55',
-        'eu-west-1': 'ami-03b9a7c8f0fc1808e',
-        'us-west-2': 'ami-0b7ebdd52b84c244d',
-      }))
+      machine_image= self.machine_image) 
 
     core.Tags.of(self.instance).add('domain','virtual.world')
+
+  @property
+  def machine_image(self)->ec2.IMachineImage:
+    return ec2.MachineImage.generic_windows(ami_map={
+      'us-east-1': 'ami-0f93c815788872c5d',
+      'us-east-2': 'ami-0b697c4ae566cad55',
+      'eu-west-1': 'ami-03b9a7c8f0fc1808e',
+      'us-west-2': 'ami-0b7ebdd52b84c244d',
+    })
