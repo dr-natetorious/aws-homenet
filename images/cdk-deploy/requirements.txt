@@ -16,4 +16,5 @@ aws_cdk.aws_backup
 aws_cdk.aws_fsx
 aws_cdk.aws_timestream
 aws_cdk.aws_codeartifact
+aws_cdk.aws_codepipeline_actions
 cryptography

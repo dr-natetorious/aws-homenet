@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 #from infra.subnets.artifacts import ArtifactsConstruct
+from infra.subnets.cicd.rtsp_connector_pipe import RtspConnectorPipeline
 from infra.subnets.artifacts import ArtifactsConstruct
 from infra.subnets.fs import NetworkFileSystems
 from infra.subnets.jumpbox import JumpBoxConstruct
@@ -303,6 +304,9 @@ class Artifactory(LandingZone):
     self.code_artifacts = ArtifactsConstruct(self,'CodeArtifacts',
       landing_zone=self,
       zone= zone)
+
+    self.rtsp_connector_pipeline = RtspConnectorPipeline(self,RtspConnectorPipeline.__name__,
+      landing_zone=self)
 
   @property
   def zone_name(self) -> str:

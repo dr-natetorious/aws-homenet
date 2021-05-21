@@ -10,7 +10,7 @@ class ArtifactsConstruct(core.Construct):
   Represents a code artifact repository.
   """
   def __init__(self, scope: core.Construct, id: str, landing_zone:ILandingZone,zone:r53.IHostedZone, **kwargs) -> None:
-    super().__init__(scope, id, **kwargs)    
+    super().__init__(scope, id, **kwargs)
     core.Tags.of(self).add('Construct',ArtifactsConstruct.__name__)
 
     self.domain = art.CfnDomain(self,'Domain',
