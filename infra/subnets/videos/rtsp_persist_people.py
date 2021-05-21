@@ -1,4 +1,4 @@
-from infra.subnets.videos.base_resources import Infra
+from infra.subnets.videos.base_resources import RtspBaseResourcesConstruct
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,
@@ -13,7 +13,7 @@ from aws_cdk import (
 
 class RtspPersistPeopleFunction(core.Construct):
   def __init__(self, scope: core.Construct, id: str, 
-    infra:Infra,
+    infra:RtspBaseResourcesConstruct,
     **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
 

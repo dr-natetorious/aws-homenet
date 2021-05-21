@@ -1,3 +1,4 @@
+from enum import auto
 from infra.interfaces import IVpcLandingZone
 from json import loads
 from aws_cdk import (
@@ -12,11 +13,11 @@ from aws_cdk import (
   aws_logs as logs,
   aws_autoscaling as autoscale,
   aws_sns as sns,
-  aws_ssm as ssm,
   aws_s3_notifications as s3n,
 )
 
 cameras=['live'+str(x) for x in range(0,3)]
+task_drain_time= core.Duration.minutes(0)
 
 install_ssm_script="""
 #!/bin/bash
@@ -24,7 +25,7 @@ yum -y update && yum -y https://s3.us-east-1.amazonaws.com/amazon-ssm-us-east-1/
 sudo systemctl status amazon-ssm-agent
 """
 
-class Infra(core.Construct):
+class RtspBaseResourcesConstruct(core.Construct):
   @property
   def landing_zone(self)->IVpcLandingZone:
     return self.__landing_zone
@@ -52,21 +53,26 @@ class Infra(core.Construct):
         file='Dockerfile',
         repository_name='homenet-rtsp-connector'))
 
-    self.frameAnalyzed = sns.Topic(self,'FrameAnalyzed',
-      display_name='HomeNet-VideoFrame-Analyzed',
-      topic_name='HomeNet-VideoFrame-Analyzed')
+    self.frameAnalyzed = sns.Topic(self,'FrameAnalysis',
+      display_name='{}-Rtsp-FrameAnalysis'.format(landing_zone.zone_name),
+      topic_name='{}-Rtsp-FrameAnalysis'.format(landing_zone.zone_name))
 
-    self.frameUploaded = sns.Topic(self,'VideoFrameUploaded',
-      display_name='HomeNet-VideoFrame-Uploaded',
-      topic_name='HomeNet-VideoFrame-Uploaded')
+    self.frameUploaded = sns.Topic(self,'RtspFrameUploaded',
+      display_name='{}-Rtsp-FrameUploaded'.format(landing_zone.zone_name),
+      topic_name='{}-Rtsp-FrameUploaded'.format(landing_zone.zone_name))
 
     self.bucket = s3.Bucket(self,'Bucket',
-      bucket_name='nbachmei.personal.video.v2.'+core.Stack.of(self).region,
-      removal_policy= core.RemovalPolicy.DESTROY,
+      removal_policy= core.RemovalPolicy.RETAIN,
+      bucket_name='homenet-{}.{}.virtual.world'.format(
+        'hybrid',#landing_zone.zone_name.lower(),
+        core.Stack.of(self).region),
       lifecycle_rules=[
         s3.LifecycleRule(
           abort_incomplete_multipart_upload_after= core.Duration.days(1),
-          expiration= core.Duration.days(30))
+          expiration= core.Duration.days(30)),
+        s3.LifecycleRule(
+          tag_filters={'Cached':'7d'},
+          expiration= core.Duration.days(7))
       ])
 
     self.bucket.add_event_notification(
@@ -84,8 +90,8 @@ class Infra(core.Construct):
 
     self.execution_role = iam.Role(self,'ExecutionRole',
       assumed_by=iam.ServicePrincipal(service='ecs-tasks'),
-      role_name='ecs-video-producer-execution@homenet-{}'.format(core.Stack.of(self).region),      
-      description='Role for Launching VideoSubnet Tasks')
+      role_name='ecs-rtsp-cluster-execution-role@homenet-{}'.format(core.Stack.of(self).region),      
+      description='ECS Execution Role for '+ RtspBaseResourcesConstruct.__name__)
 
     self.bucket.grant_write(self.task_role)
     self.frameAnalyzed.grant_publish(self.task_role)
@@ -94,32 +100,49 @@ class Infra(core.Construct):
 
     self.cluster = ecs.Cluster(self,'Cluster',
       vpc=self.landing_zone.vpc,
-      cluster_name='nbachmei-personal-video-'+core.Stack.of(self).region)
+      cluster_name='nbachmei-personal-video-us-east-1')
+      #cluster_name='{}-rtsp-services'.format(landing_zone.zone_name))
+
+    self.cluster = ecs.Cluster(self,'RtspCluster',
+      vpc=self.landing_zone.vpc,
+      cluster_name='{}-rtsp-services'.format(landing_zone.zone_name))
+
+    # Tag all cluster resources for auto-domain join.
     core.Tags.of(self.cluster).add('domain','virtual.world')
 
     #win_ami_param = ssm.StringParameter.from_string_parameter_name(self,'WindowsAmiParameter',
     #  string_parameter_name='/aws/service/ami-windows-latest/Windows_Server-1909-English-Core-ECS_Optimized/image_id')
 
-
-    self.autoscale_group = self.cluster.add_capacity('DefaultCapacity',
+    self.autoscale_group = autoscale.AutoScalingGroup(self,'WinASG',
+      security_group=landing_zone.security_group,
       instance_type= ec2.InstanceType.of(
         instance_class= ec2.InstanceClass.BURSTABLE3,
         instance_size=ec2.InstanceSize.SMALL),
       machine_image= ec2.MachineImage.generic_windows(ami_map={
-        'us-east-1':'ami-00e5e4bfacd58146c',
-        #core.Stack.of(self).region: win_ami_param.string_value,
+        'us-east-1':'ami-0f93c815788872c5d'
       }),
+      vpc= landing_zone.vpc,
+      role= self.execution_role,
       allow_all_outbound=True,
       associate_public_ip_address=False,
-      min_capacity=1,
-      #desired_capacity=2,
-      max_capacity=2,
+      #auto_scaling_group_name='{}-Rtsp-Windows'.format(landing_zone.zone_name),
+      min_capacity= 1,
+      max_capacity=5,
+      rolling_update_configuration= autoscale.RollingUpdateConfiguration(
+        min_instances_in_service=0),
       update_type= autoscale.UpdateType.REPLACING_UPDATE,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
 
+    self.cluster.add_auto_scaling_group(
+      auto_scaling_group= self.autoscale_group,
+      can_containers_access_instance_role=True,
+      task_drain_time= task_drain_time)
+
+    # Enable management from Managed AD and SSM
     for policy in ['AmazonSSMDirectoryServiceAccess','AmazonSSMManagedInstanceCore']:
       self.autoscale_group.role.add_managed_policy(
         iam.ManagedPolicy.from_aws_managed_policy_name(
           managed_policy_name=policy))
 
+    # Needed for unofficial Amazon images
     #self.autoscale_group.add_user_data(install_ssm_script)

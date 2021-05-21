@@ -1,4 +1,4 @@
-from infra.subnets.videos.base_resources import Infra
+from infra.subnets.videos.base_resources import RtspBaseResourcesConstruct
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,
@@ -20,7 +20,7 @@ class RtspConnectorService(core.Construct):
   Represents an ECS service for collecting RTSP frames.
   """
   def __init__(self, scope: core.Construct, id: str, 
-    infra:Infra,
+    infra:RtspBaseResourcesConstruct,
     home_base:str,
     **kwargs) -> None:
     super().__init__(scope, id, **kwargs)    

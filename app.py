@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from infra.subnets.artifacts import ArtifactsConstruct
 import os.path
 from typing import List
 from aws_cdk import core
@@ -12,6 +13,9 @@ us_east_2 = core.Environment(region="us-east-2", account='581361757134')
 class NetworkingApp(core.App):
   def __init__(self, **kwargs) ->None:
     super().__init__(**kwargs)
+
+    # Deploy code artifacts and cicd...
+    #self.artifacts = ArtifactsConstruct(self,)
 
     # Deploy core services
     self.core_svc = CoreServices(self,'HomeNet-CoreSvc', env=us_east_2)

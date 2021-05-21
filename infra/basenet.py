@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#from infra.subnets.artifacts import ArtifactsConstruct
 from infra.subnets.fs import NetworkFileSystems
 from infra.subnets.jumpbox import JumpBoxConstruct
 import os.path
@@ -16,7 +17,7 @@ from infra.vpce import VpcEndpointsForAWSServices
 from aws_cdk import (
     core,
     aws_ec2 as ec2,
-    aws_ssm as ssm,
+    aws_route53 as r53,
 )
 
 src_root_dir = os.path.join(os.path.dirname(__file__))
@@ -289,3 +290,18 @@ class VpcPeeringReceiver(LandingZone):
   @property
   def zone_name(self) -> str:
     return 'Hybrid-Receiver'
+
+# class Artifactory(LandingZone):
+#   def __init__(self, scope: core.Construct, id: str, domain_name:str, **kwargs) -> None:
+#     super().__init__(scope, id, **kwargs)
+
+#     self.code_artifacts = ArtifactsConstruct(self,'CodeArtifacts',
+#       landing_zone=self)
+
+#     # zone = r53.HostedZone.from_lookup(self,'HostedZone',
+#     #   domain_name=domain_name)
+#     #self.code_artifacts.configure_dns(zone=zone)
+
+#   @property
+#   def zone_name(self) -> str:
+#       return 'artifacts'

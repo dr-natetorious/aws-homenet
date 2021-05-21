@@ -1,7 +1,7 @@
 from infra.subnets.identity import CertificateAuthority
 from aws_cdk.aws_certificatemanager import Certificate
 from infra.interfaces import IVpcLandingZone
-from infra.subnets.videos.base_resources import Infra
+from infra.subnets.videos.base_resources import RtspBaseResourcesConstruct
 from aws_cdk import (
   core,
   aws_ec2 as ec2,
@@ -17,7 +17,7 @@ class PhotosApiConstruct(core.Construct):
   """
   Configure and deploy the account linking service
   """
-  def __init__(self, scope: core.Construct, id: str, landing_zone:IVpcLandingZone, infra:Infra,subnet_group_name:str='Default', **kwargs) -> None:
+  def __init__(self, scope: core.Construct, id: str, landing_zone:IVpcLandingZone, infra:RtspBaseResourcesConstruct,subnet_group_name:str='Default', **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
     core.Tags.of(self).add(key='Source', value= PhotosApiConstruct.__name__)
       

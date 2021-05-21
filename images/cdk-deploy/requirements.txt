@@ -15,4 +15,5 @@ aws_cdk.aws_route53resolver
 aws_cdk.aws_backup
 aws_cdk.aws_fsx
 aws_cdk.aws_timestream
+aws_cdk.aws_codeartifact
 cryptography
