@@ -1,4 +1,4 @@
-from infra.services.rtsp.base_resources import RtspBaseResourcesConstruct
+from infra.services.rtsp.resources.base_resources import RtspBaseResourcesConstruct
 from json import loads
 from aws_cdk import (
   core,
