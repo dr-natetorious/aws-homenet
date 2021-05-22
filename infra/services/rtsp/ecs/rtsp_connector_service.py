@@ -5,7 +5,7 @@ For some reason EC2 instances in ASG cannot talk across the site-to-site vpn.
 
 The rtsp_connector.py is interm replacement solution.
 """
-from infra.services.videos.base_resources import RtspBaseResourcesConstruct
+from infra.services.rtsp.base_resources import RtspBaseResourcesConstruct
 from aws_cdk import (
   core,
   aws_ec2 as ec2,

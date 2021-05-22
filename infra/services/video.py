@@ -1,10 +1,10 @@
-from infra.services.videos.rtsp_connector import RtspConnectorConstruct
-from infra.services.videos.time_stream import TimeStreamConstruct
-from infra.services.videos.rtsp_persist_people import RtspPersistPeopleFunction
+from infra.services.rtsp.rtsp_connector import RtspConnectorConstruct
+from infra.services.rtsp.time_stream import TimeStreamConstruct
+from infra.services.rtsp.rtsp_persist_people import RtspPersistPeopleFunction
 from infra.services.core.identity import CertificateAuthority
-from infra.services.videos.photos_api import PhotosApiConstruct
-from infra.services.videos.base_resources import RtspBaseResourcesConstruct
-#from infra.services.videos.rtsp_connector_service import RtspConnectorService
+from infra.services.rtsp.photos_api import PhotosApiConstruct
+from infra.services.rtsp.base_resources import RtspBaseResourcesConstruct
+#from infra.services.rtsp.rtsp_connector_service import RtspConnectorService
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,

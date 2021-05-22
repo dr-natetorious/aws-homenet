@@ -1,6 +1,4 @@
-from infra.services.videos.base_resources import RtspBaseResourcesConstruct
-from infra.services.videos.time_stream import TimeStreamConstruct
-from infra.interfaces import IVpcLandingZone
+from infra.services.rtsp.base_resources import RtspBaseResourcesConstruct
 from json import loads
 from aws_cdk import (
   core,

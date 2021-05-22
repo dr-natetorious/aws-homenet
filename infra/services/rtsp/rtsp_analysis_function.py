@@ -1,7 +1,7 @@
 from typing import Mapping
 
 from aws_cdk.aws_logs import SubscriptionFilter
-from infra.services.videos.base_resources import RtspBaseResourcesConstruct
+from infra.services.rtsp.base_resources import RtspBaseResourcesConstruct
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,

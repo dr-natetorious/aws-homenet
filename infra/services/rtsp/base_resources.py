@@ -1,4 +1,4 @@
-from infra.services.videos.time_stream import TimeStreamConstruct
+from infra.services.rtsp.time_stream import TimeStreamConstruct
 from infra.interfaces import IVpcLandingZone
 from json import loads
 from aws_cdk import (
