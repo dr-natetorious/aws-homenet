@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-#from infra.subnets.artifacts import ArtifactsConstruct
-from infra.subnets.cicd.rtsp_connector_pipe import RtspConnectorPipeline
-from infra.subnets.artifacts import ArtifactsConstruct
-from infra.subnets.fs import NetworkFileSystems
-from infra.subnets.jumpbox import JumpBoxConstruct
+#from infra.services.artifacts import ArtifactsConstruct
+from infra.services.cicd.rtsp_connector_pipe import RtspConnectorPipeline
+from infra.services.artifacts import ArtifactsConstruct
+from infra.services.fs import NetworkFileSystems
+from infra.services.jumpbox import JumpBoxConstruct
 import os.path
 from typing import List
 from aws_cdk.core import Construct, Environment, Stack, Tags
 from infra.networking import NetworkingLayer
-from infra.subnets.resolver import HostedZones, ResolverSubnet
-from infra.subnets.identity import CertificateAuthority, DirectoryServicesConstruct
-from infra.subnets.netstore import NetStoreSubnet
-from infra.subnets.video import VideoSubnet
-from infra.subnets.vpn import VpnSubnet
+from infra.services.resolver import HostedZones, ResolverSubnet
+from infra.services.identity import CertificateAuthority, DirectoryServicesConstruct
+from infra.services.netstore import NetStoreSubnet
+from infra.services.video import VideoSubnet
+from infra.services.vpn import VpnSubnet
 from infra.services.backup import BackupStrategyConstruct
 from infra.interfaces import ILandingZone, IVpcLandingZone, IVpcEndpointsForAWSServices
 from infra.vpce import VpcEndpointsForAWSServices

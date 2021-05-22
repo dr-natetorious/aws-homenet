@@ -1,6 +1,6 @@
 from typing import Mapping
-from infra.subnets.videos.rtsp_analysis_function import RtspAnalysisFunction
-from infra.subnets.videos.base_resources import RtspBaseResourcesConstruct
+from infra.services.videos.rtsp_analysis_function import RtspAnalysisFunction
+from infra.services.videos.base_resources import RtspBaseResourcesConstruct
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,

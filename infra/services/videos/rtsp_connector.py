@@ -1,5 +1,5 @@
-from infra.subnets.jumpbox import JumpBoxConstruct
-from infra.subnets.videos.base_resources import RtspBaseResourcesConstruct
+from infra.services.jumpbox import JumpBoxConstruct
+from infra.services.videos.base_resources import RtspBaseResourcesConstruct
 from aws_cdk import (
   core,
   aws_ec2 as ec2,

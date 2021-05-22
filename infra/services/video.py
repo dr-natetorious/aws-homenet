@@ -1,10 +1,10 @@
-from infra.subnets.videos.rtsp_connector import RtspConnectorConstruct
-from infra.subnets.videos.time_stream import TimeStreamConstruct
-from infra.subnets.videos.rtsp_persist_people import RtspPersistPeopleFunction
-from infra.subnets.identity import CertificateAuthority
-from infra.subnets.videos.photos_api import PhotosApiConstruct
-from infra.subnets.videos.base_resources import RtspBaseResourcesConstruct
-from infra.subnets.videos.rtsp_connector_service import RtspConnectorService
+from infra.services.videos.rtsp_connector import RtspConnectorConstruct
+from infra.services.videos.time_stream import TimeStreamConstruct
+from infra.services.videos.rtsp_persist_people import RtspPersistPeopleFunction
+from infra.services.identity import CertificateAuthority
+from infra.services.videos.photos_api import PhotosApiConstruct
+from infra.services.videos.base_resources import RtspBaseResourcesConstruct
+from infra.services.videos.rtsp_connector_service import RtspConnectorService
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,

@@ -1,7 +1,7 @@
-from infra.subnets.identity import CertificateAuthority
+from infra.services.identity import CertificateAuthority
 from aws_cdk.aws_certificatemanager import Certificate
 from infra.interfaces import IVpcLandingZone
-from infra.subnets.videos.base_resources import RtspBaseResourcesConstruct
+from infra.services.videos.base_resources import RtspBaseResourcesConstruct
 from aws_cdk import (
   core,
   aws_ec2 as ec2,

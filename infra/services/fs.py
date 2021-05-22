@@ -1,6 +1,6 @@
-from infra.subnets.resolver import HostedZones
+from infra.services.resolver import HostedZones
 from infra.interfaces import IVpcLandingZone
-from infra.subnets.identity import DirectoryServicesConstruct
+from infra.services.identity import DirectoryServicesConstruct
 from aws_cdk import (
     core,
     aws_ec2 as ec2,
