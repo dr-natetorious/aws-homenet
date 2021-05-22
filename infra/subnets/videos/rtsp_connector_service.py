@@ -1,19 +1,18 @@
+"""
+This deploys the /src/rtsp-connector into ECS service.
+
+For some reason EC2 instances in ASG cannot talk across the site-to-site vpn.
+
+The rtsp_connector.py is interm replacement solution.
+"""
 from infra.subnets.videos.base_resources import RtspBaseResourcesConstruct
-from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,
   aws_ec2 as ec2,
   aws_ecs as ecs,
 )
 
-desired_count = 1
-cameras=['live'+str(x) for x in range(0,3)]
-
-install_ssm_script="""
-#!/bin/bash
-yum -y update && yum -y https://s3.us-east-1.amazonaws.com/amazon-ssm-us-east-1/latest/linux_amd64/amazon-ssm-agent.rpm
-sudo systemctl status amazon-ssm-agent
-"""
+desired_count = 0
 
 class RtspConnectorService(core.Construct):
   """
