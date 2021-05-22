@@ -21,7 +21,8 @@ chkconfig docker on
 mkdir -p /app
 cd /app
 
-aws s3 cp --recursive s3://homenet-hybrid.us-east-1.virtual.world/app/rtsp-connector/ .
+aws s3 cp s3://homenet-hybrid.us-east-1.virtual.world/app/rtsp-connector/run-connector.sh .
+
 chmod +x ./run-connector.sh
 ./run-connector.sh
 """.strip()
@@ -39,19 +40,35 @@ class RtspConnectorConstruct(JumpBoxConstruct):
     self.container_image = assets.DockerImageAsset(self,'Container',
       directory='src/rtsp-connector')
   
-    tag_param = ssm.StringParameter(self,'ImageTagParam',
-      parameter_name='/homenet/{}/ecr/rtsp-connector/latest'.format(infra.landing_zone.zone_name),
-      string_value=self.container_image.image_uri)
+    # Pass the environment variables via SSM
+    environment={
+        'SERVER_URI':'admin:EYE_SEE_YOU@192.168.0.70',
+        'BUCKET':infra.bucket.bucket_name,
+        'FRAME_ANALYZED_TOPIC': infra.frameAnalyzed.topic_name,
+        'REK_COLLECT_ID': 'homenet-hybrid-collection',
+        'REGION':core.Stack.of(self).region,
+        'IMAGE_URI': self.container_image.image_uri,
+        'LOG_GROUP': infra.log_group.log_group_name,
+      }
 
+    for env_name in environment.keys():
+      param = ssm.StringParameter(self,env_name+'Param',
+        parameter_name='/homenet/{}/rtsp/rtsp-connector/{}'.format(
+          infra.landing_zone.zone_name,
+          env_name),
+        string_value=environment[env_name])
+      param.grant_read(self.instance.role)
+      
     # Grant permissions...
     infra.bucket.grant_read_write(self.instance.role)
     infra.frameAnalyzed.grant_publish(self.instance.role)
-    tag_param.grant_read(self.instance.role)
+    infra.log_group.grant_write(self.instance.role)
 
     for name in [
       'AWSCodeArtifactReadOnlyAccess',
       'AmazonEC2ContainerRegistryReadOnly',
-      'AmazonRekognitionFullAccess']:
+      'AmazonRekognitionFullAccess',
+      'CloudWatchLogsFullAccess']:
       self.instance.role.add_managed_policy(
         iam.ManagedPolicy.from_aws_managed_policy_name(name))
 
