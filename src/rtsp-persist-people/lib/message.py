@@ -1,4 +1,5 @@
 from typing import List
+from json import loads
 
 class Emotion:
   def __init__(self, props:dict) -> None:
@@ -18,6 +19,11 @@ class Message:
   Represents the SnsNotifications payload. 
   """
   def __init__(self, props:dict) -> None:
+    self.__props = props
+    self.__time_stamp = props['Sns']['Timestamp']
+    self.__parse_payload(loads(props['Sns']['Message']))
+
+  def __parse_payload(self, props:dict)->None:
     self.__face_id = props['FaceId']
     self.__image_id=  props['ImageId']
     self.__bounding_box=  props['BoundingBox']
@@ -28,6 +34,13 @@ class Message:
     self.__quality=  props['Quality']
     self.__camera = props['Camera']
     self.__s3_uri = props['S3_Uri']
+
+  def as_dict(self)->dict:
+    return self.__props
+
+  @property
+  def time_stamp(self)->str:
+    return self.__time_stamp
 
   @property
   def face_id(self)->str:
@@ -76,6 +89,6 @@ class Message:
     results=[]
     for emotion in self.emotions:
       if emotion.confidence >= threshold:
-        results.append(emotion)
+        results.append(emotion.type)
     return results
 

@@ -12,8 +12,8 @@ class RtspConnectorConstruct(JumpBoxConstruct):
   """
   Represents an ECS service for collecting RTSP frames.
   """
-  def __init__(self, scope: core.Construct, id: str,landing_zone:IVpcLandingZone, home_base:str, **kwargs) -> None:
-    super().__init__(scope, id, landing_zone=landing_zone, **kwargs)
+  def __init__(self, scope: core.Construct, id: str,infra:RtspBaseResourcesConstruct, home_base:str, **kwargs) -> None:
+    super().__init__(scope, id, landing_zone=infra.landing_zone, **kwargs)
     core.Tags.of(self).add('home_base',home_base)
 
     self.instance.role.add_managed_policy(

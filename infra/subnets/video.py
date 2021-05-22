@@ -30,7 +30,7 @@ class VideoSubnet(core.Construct):
       home_base='moon-base')
 
     self.rtsp_connector = RtspConnectorConstruct(self,'RtspConnector',
-      landing_zone=landing_zone,
+      infra=self.infra,
       home_base='moon-base')
 
     self.photos_api = PhotosApiConstruct(self,'PhotosApi',

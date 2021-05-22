@@ -9,9 +9,12 @@ class TimeStreamConstruct(core.Construct):
     super().__init__(scope, id, **kwargs)
 
     self.database = ts.CfnDatabase(self,'Database',
-      database_name='{}-rtsp'.format(landing_zone.zone_name))
+      database_name='HomeNet-{}-rtsp'.format(landing_zone.zone_name))
 
     self.people = ts.CfnTable(self,'People',
       database_name= self.database.database_name,
       table_name='people')
+
+    self.people.add_depends_on(self.database)
+
       

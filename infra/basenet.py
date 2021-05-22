@@ -305,8 +305,8 @@ class Artifactory(LandingZone):
       landing_zone=self,
       zone= zone)
 
-    self.rtsp_connector_pipeline = RtspConnectorPipeline(self,RtspConnectorPipeline.__name__,
-      landing_zone=self)
+    # self.rtsp_connector_pipeline = RtspConnectorPipeline(self,RtspConnectorPipeline.__name__,
+    #   landing_zone=self)
 
   @property
   def zone_name(self) -> str:
