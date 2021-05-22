@@ -32,8 +32,10 @@ class RtspPersistPeopleFunction(core.Construct):
       role_name='rtsp-process-locations@homenet-{}'.format(core.Stack.of(self).region),
       managed_policies=[
         iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='service-role/AWSLambdaVPCAccessExecutionRole'
-      )])
+          managed_policy_name='service-role/AWSLambdaVPCAccessExecutionRole'),
+        iam.ManagedPolicy.from_aws_managed_policy_name(
+          managed_policy_name='AmazonTimestreamFullAccess')
+      ])
 
     self.function = lambda_.DockerImageFunction(self,'Function',
       code = code,
@@ -46,7 +48,12 @@ class RtspPersistPeopleFunction(core.Construct):
       memory_size=128,
       allow_all_outbound=True,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=infra.subnet_group_name),
-      security_groups=[infra.security_group]
+      security_groups=[infra.security_group],
+      environment={
+        'REGION':core.Stack.of(self).region,
+        'DATABASE_NAME': infra.time_stream.people_table.database_name,
+        'TABLE_NAME': infra.time_stream.people_table.table_name,
+      }
     )
 
     self.dlq = sqs.Queue(self,'DeadLetterQueue',

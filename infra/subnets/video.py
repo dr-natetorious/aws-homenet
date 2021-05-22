@@ -21,9 +21,6 @@ class VideoSubnet(core.Construct):
       landing_zone= landing_zone,
       subnet_group_name=subnet_group_name)
 
-    self.time_stream = TimeStreamConstruct(self,'TimeStream',
-      landing_zone=landing_zone)
-
     self.moon_base = RtspConnectorService(
       self,'MoonBase',
       infra=self.infra,

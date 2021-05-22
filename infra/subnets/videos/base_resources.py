@@ -1,4 +1,5 @@
 from enum import auto
+from infra.subnets.videos.time_stream import TimeStreamConstruct
 from infra.interfaces import IVpcLandingZone
 from json import loads
 from aws_cdk import (
@@ -54,12 +55,12 @@ class RtspBaseResourcesConstruct(core.Construct):
         repository_name='homenet-rtsp-connector'))
 
     self.frameAnalyzed = sns.Topic(self,'FrameAnalysis',
-      display_name='{}-Rtsp-FrameAnalysis'.format(landing_zone.zone_name),
-      topic_name='{}-Rtsp-FrameAnalysis'.format(landing_zone.zone_name))
+      display_name='HomeNet-{}-Rtsp-FrameAnalysis'.format(landing_zone.zone_name),
+      topic_name='HomeNet-{}-Rtsp-FrameAnalysis'.format(landing_zone.zone_name))
 
     self.frameUploaded = sns.Topic(self,'RtspFrameUploaded',
-      display_name='{}-Rtsp-FrameUploaded'.format(landing_zone.zone_name),
-      topic_name='{}-Rtsp-FrameUploaded'.format(landing_zone.zone_name))
+      display_name='HomeNet-{}-Rtsp-FrameUploaded'.format(landing_zone.zone_name),
+      topic_name='HomeNet-{}-Rtsp-FrameUploaded'.format(landing_zone.zone_name))
 
     self.bucket = s3.Bucket(self,'Bucket',
       removal_policy= core.RemovalPolicy.RETAIN,
@@ -146,3 +147,6 @@ class RtspBaseResourcesConstruct(core.Construct):
 
     # Needed for unofficial Amazon images
     #self.autoscale_group.add_user_data(install_ssm_script)
+
+    self.time_stream = TimeStreamConstruct(self,'TimeStream',
+      landing_zone=landing_zone)
