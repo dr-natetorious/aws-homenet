@@ -1,3 +1,5 @@
+from typing import Mapping
+from infra.subnets.videos.rtsp_analysis_function import RtspAnalysisFunction
 from infra.subnets.videos.base_resources import RtspBaseResourcesConstruct
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
@@ -11,66 +13,31 @@ from aws_cdk import (
   aws_ecr_assets as assets,
 )
 
-class RtspPersistPeopleFunction(core.Construct):
+class RtspPersistPeopleFunction(RtspAnalysisFunction):
+
+  @property
+  def source_directory(self) -> str:
+    return 'src/rtsp-persist-people'
+
+  @property
+  def filter_policy(self)->Mapping[str,sns.SubscriptionFilter]:
+    return {
+      'HasPerson': sns.SubscriptionFilter.string_filter(
+        allowlist=['true','True','TRUE'])
+    }
+
   def __init__(self, scope: core.Construct, id: str, 
     infra:RtspBaseResourcesConstruct,
     **kwargs) -> None:
-    super().__init__(scope, id, **kwargs)
+    super().__init__(scope, id, infra=infra, **kwargs)
 
-    self.repo = assets.DockerImageAsset(self,'Repo',
-      directory='src/rtsp-persist-people',
-      file='Dockerfile',
-      repository_name='homenet-rtsp-persist-people')
+    self.function.role.add_managed_policy(
+      iam.ManagedPolicy.from_aws_managed_policy_name(
+          managed_policy_name='AmazonTimestreamFullAccess'))
 
-    code = lambda_.DockerImageCode.from_ecr(
-        repository=self.repo.repository,
-        tag=self.repo.image_uri.split(':')[-1])
-
-    role = iam.Role(self,'Role',
-      assumed_by=iam.ServicePrincipal(service='lambda'),
-      description='Listen to FrameAnalyzed events and persist people',
-      role_name='rtsp-process-locations@homenet-{}'.format(core.Stack.of(self).region),
-      managed_policies=[
-        iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='service-role/AWSLambdaVPCAccessExecutionRole'),
-        iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='AmazonTimestreamFullAccess')
-      ])
-
-    self.function = lambda_.DockerImageFunction(self,'Function',
-      code = code,
-      role= role,
-      function_name='HomeNet-Rtsp-Persist-People',
-      description='Python container lambda function for '+RtspPersistPeopleFunction.__name__,
-      timeout= core.Duration.minutes(1),
-      tracing= lambda_.Tracing.ACTIVE,
-      vpc= infra.landing_zone.vpc,
-      memory_size=128,
-      allow_all_outbound=True,
-      vpc_subnets=ec2.SubnetSelection(subnet_group_name=infra.subnet_group_name),
-      security_groups=[infra.security_group],
-      environment={
-        'REGION':core.Stack.of(self).region,
-        'DATABASE_NAME': infra.time_stream.people_table.database_name,
-        'TABLE_NAME': infra.time_stream.people_table.table_name,
-      }
-    )
-
-    self.dlq = sqs.Queue(self,'DeadLetterQueue',
-      queue_name=self.function.function_name+"_dlq")
-
-    self.function.add_event_source(events.SnsEventSource(
-      topic= infra.frameAnalyzed,
-      dead_letter_queue= self.dlq,
-      filter_policy={
-        'HasPerson': sns.SubscriptionFilter.string_filter(
-          allowlist=['true','True','TRUE'])
-      }))
-
-    # sns.Subscription(self,'Subscription',
-    #   topic=infra.frameAnalyzed,
-    #   endpoint= self.function.function_arn,
-    #   protocol= sns.SubscriptionProtocol.LAMBDA,
-    #   dead_letter_queue= self.dlq)
-
-    
+    self.function.add_environment(
+      key='DATABASE_NAME',
+      value=infra.time_stream.people_table.database_name)
+    self.function.add_environment(
+      key='TABLE_NAME',
+      value=infra.time_stream.people_table.table_name)
