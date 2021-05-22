@@ -1,3 +1,2 @@
 rtsp
 boto3
-awslambdaric

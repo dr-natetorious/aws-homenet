@@ -1,11 +1,10 @@
-from typing import List
+from typing import List, Mapping
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
     core,
     aws_ec2 as ec2,
     aws_iam as iam,
 )
-
 
 class JumpBoxConstruct(core.Construct):
   def __init__(self, scope:core.Construct, id:str, landing_zone:IVpcLandingZone, **kwargs):

@@ -19,6 +19,8 @@ from aws_cdk import (
 
 cameras=['live'+str(x) for x in range(0,3)]
 task_drain_time= core.Duration.minutes(0)
+min_capacity = 0
+max_capacity = 0
 
 install_ssm_script="""
 #!/bin/bash
@@ -127,8 +129,8 @@ class RtspBaseResourcesConstruct(core.Construct):
       allow_all_outbound=True,
       associate_public_ip_address=False,
       #auto_scaling_group_name='{}-Rtsp-Windows'.format(landing_zone.zone_name),
-      min_capacity= 1,
-      max_capacity=5,
+      min_capacity= min_capacity,
+      max_capacity= max_capacity,
       rolling_update_configuration= autoscale.RollingUpdateConfiguration(
         min_instances_in_service=0),
       update_type= autoscale.UpdateType.REPLACING_UPDATE,
