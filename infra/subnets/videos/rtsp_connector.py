@@ -6,6 +6,7 @@ from aws_cdk import (
   aws_ec2 as ec2,
   aws_iam as iam,
   aws_ssm as ssm,
+  aws_route53 as r53,
 )
 
 class RtspConnectorConstruct(JumpBoxConstruct):
@@ -30,3 +31,12 @@ class RtspConnectorConstruct(JumpBoxConstruct):
     return ec2.MachineImage.generic_linux(ami_map={
       core.Stack.of(self).region: param.string_value
     })
+
+  def configure_dns(self,zone:r53.IHostedZone):
+    r53.ARecord(self,'HostRecord',
+      zone=zone,
+      record_name='rtsp-connector.{}'.format(zone.zone_name),
+      ttl = core.Duration.minutes(1),
+      target= r53.RecordTarget(
+        values=[self.instance.instance_private_ip]
+      ))

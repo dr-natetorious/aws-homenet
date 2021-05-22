@@ -40,3 +40,4 @@ class VideoSubnet(core.Construct):
 
   def configure_dns(self,zone:r53.IHostedZone, ca:CertificateAuthority)->None:
     self.photos_api.configure_dns(zone, ca)
+    self.rtsp_connector.configure_dns(zone=zone)
