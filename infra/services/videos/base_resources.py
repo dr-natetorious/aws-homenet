@@ -14,9 +14,9 @@ from aws_cdk import (
   aws_autoscaling as autoscale,
   aws_sns as sns,
   aws_s3_notifications as s3n,
+  aws_dynamodb as ddb,
 )
 
-cameras=['live'+str(x) for x in range(0,3)]
 task_drain_time= core.Duration.minutes(0)
 min_capacity = 0
 max_capacity = 0
@@ -49,11 +49,11 @@ class RtspBaseResourcesConstruct(core.Construct):
       retention=logs.RetentionDays.ONE_DAY,
       removal_policy= core.RemovalPolicy.DESTROY)
 
-    self.container = ecs.ContainerImage.from_docker_image_asset(
-      asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
-        directory='src/rtsp-connector',
-        file='Dockerfile',
-        repository_name='homenet-rtsp-connector'))
+    # self.container = ecs.ContainerImage.from_docker_image_asset(
+    #   asset=ecr.DockerImageAsset(self,'VideoProducerContainer',
+    #     directory='src/rtsp-connector',
+    #     file='Dockerfile',
+    #     repository_name='homenet-rtsp-connector'))
 
     self.frameAnalyzed = sns.Topic(self,'FrameAnalysis',
       display_name='HomeNet-{}-Rtsp-FrameAnalysis'.format(landing_zone.zone_name),
@@ -81,70 +81,70 @@ class RtspBaseResourcesConstruct(core.Construct):
       s3.EventType.OBJECT_CREATED,
       s3n.SnsDestination(topic=self.frameUploaded))
 
-    self.task_role = iam.Role(self,'TaskRole',
-      assumed_by=iam.ServicePrincipal(service='ecs-tasks'),
-      role_name='ecs-video-producer-task@homenet-{}'.format(core.Stack.of(self).region),
-      managed_policies=[
-        iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='AmazonRekognitionFullAccess')
-      ],
-      description='Role for VideoSubnet Tasks')
+    # self.task_role = iam.Role(self,'TaskRole',
+    #   assumed_by=iam.ServicePrincipal(service='ecs-tasks'),
+    #   role_name='ecs-video-producer-task@homenet-{}'.format(core.Stack.of(self).region),
+    #   managed_policies=[
+    #     iam.ManagedPolicy.from_aws_managed_policy_name(
+    #       managed_policy_name='AmazonRekognitionFullAccess')
+    #   ],
+    #   description='Role for VideoSubnet Tasks')
 
-    self.execution_role = iam.Role(self,'ExecutionRole',
-      assumed_by=iam.ServicePrincipal(service='ecs-tasks'),
-      role_name='ecs-rtsp-cluster-execution-role@homenet-{}'.format(core.Stack.of(self).region),      
-      description='ECS Execution Role for '+ RtspBaseResourcesConstruct.__name__)
+    # self.execution_role = iam.Role(self,'ExecutionRole',
+    #   assumed_by=iam.ServicePrincipal(service='ecs-tasks'),
+    #   role_name='ecs-rtsp-cluster-execution-role@homenet-{}'.format(core.Stack.of(self).region),      
+    #   description='ECS Execution Role for '+ RtspBaseResourcesConstruct.__name__)
 
-    self.bucket.grant_write(self.task_role)
-    self.frameAnalyzed.grant_publish(self.task_role)
+    # self.bucket.grant_write(self.task_role)
+    # self.frameAnalyzed.grant_publish(self.task_role)
 
     self.security_group = landing_zone.security_group
 
-    self.cluster = ecs.Cluster(self,'Cluster',
-      vpc=self.landing_zone.vpc,
-      cluster_name='nbachmei-personal-video-us-east-1')
-      #cluster_name='{}-rtsp-services'.format(landing_zone.zone_name))
+    # self.cluster = ecs.Cluster(self,'Cluster',
+    #   vpc=self.landing_zone.vpc,
+    #   cluster_name='nbachmei-personal-video-us-east-1')
+    #   #cluster_name='{}-rtsp-services'.format(landing_zone.zone_name))
 
-    self.cluster = ecs.Cluster(self,'RtspCluster',
-      vpc=self.landing_zone.vpc,
-      cluster_name='{}-rtsp-services'.format(landing_zone.zone_name))
+    # self.cluster = ecs.Cluster(self,'RtspCluster',
+    #   vpc=self.landing_zone.vpc,
+    #   cluster_name='{}-rtsp-services'.format(landing_zone.zone_name))
 
-    # Tag all cluster resources for auto-domain join.
-    core.Tags.of(self.cluster).add('domain','virtual.world')
+    # # Tag all cluster resources for auto-domain join.
+    # core.Tags.of(self.cluster).add('domain','virtual.world')
 
-    #win_ami_param = ssm.StringParameter.from_string_parameter_name(self,'WindowsAmiParameter',
-    #  string_parameter_name='/aws/service/ami-windows-latest/Windows_Server-1909-English-Core-ECS_Optimized/image_id')
+    # #win_ami_param = ssm.StringParameter.from_string_parameter_name(self,'WindowsAmiParameter',
+    # #  string_parameter_name='/aws/service/ami-windows-latest/Windows_Server-1909-English-Core-ECS_Optimized/image_id')
 
-    self.autoscale_group = autoscale.AutoScalingGroup(self,'WinASG',
-      security_group=landing_zone.security_group,
-      instance_type= ec2.InstanceType.of(
-        instance_class= ec2.InstanceClass.BURSTABLE3,
-        instance_size=ec2.InstanceSize.SMALL),
-      machine_image= ec2.MachineImage.generic_windows(ami_map={
-        'us-east-1':'ami-0f93c815788872c5d'
-      }),
-      vpc= landing_zone.vpc,
-      role= self.execution_role,
-      allow_all_outbound=True,
-      associate_public_ip_address=False,
-      #auto_scaling_group_name='{}-Rtsp-Windows'.format(landing_zone.zone_name),
-      min_capacity= min_capacity,
-      max_capacity= max_capacity,
-      rolling_update_configuration= autoscale.RollingUpdateConfiguration(
-        min_instances_in_service=0),
-      update_type= autoscale.UpdateType.REPLACING_UPDATE,
-      vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
+    # self.autoscale_group = autoscale.AutoScalingGroup(self,'WinASG',
+    #   security_group=landing_zone.security_group,
+    #   instance_type= ec2.InstanceType.of(
+    #     instance_class= ec2.InstanceClass.BURSTABLE3,
+    #     instance_size=ec2.InstanceSize.SMALL),
+    #   machine_image= ec2.MachineImage.generic_windows(ami_map={
+    #     'us-east-1':'ami-0f93c815788872c5d'
+    #   }),
+    #   vpc= landing_zone.vpc,
+    #   role= self.execution_role,
+    #   allow_all_outbound=True,
+    #   associate_public_ip_address=False,
+    #   #auto_scaling_group_name='{}-Rtsp-Windows'.format(landing_zone.zone_name),
+    #   min_capacity= min_capacity,
+    #   max_capacity= max_capacity,
+    #   rolling_update_configuration= autoscale.RollingUpdateConfiguration(
+    #     min_instances_in_service=0),
+    #   update_type= autoscale.UpdateType.REPLACING_UPDATE,
+    #   vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name))
 
-    self.cluster.add_auto_scaling_group(
-      auto_scaling_group= self.autoscale_group,
-      can_containers_access_instance_role=True,
-      task_drain_time= task_drain_time)
+    # self.cluster.add_auto_scaling_group(
+    #   auto_scaling_group= self.autoscale_group,
+    #   can_containers_access_instance_role=True,
+    #   task_drain_time= task_drain_time)
 
-    # Enable management from Managed AD and SSM
-    for policy in ['AmazonSSMDirectoryServiceAccess','AmazonSSMManagedInstanceCore']:
-      self.autoscale_group.role.add_managed_policy(
-        iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name=policy))
+    # # Enable management from Managed AD and SSM
+    # for policy in ['AmazonSSMDirectoryServiceAccess','AmazonSSMManagedInstanceCore']:
+    #   self.autoscale_group.role.add_managed_policy(
+    #     iam.ManagedPolicy.from_aws_managed_policy_name(
+    #       managed_policy_name=policy))
 
     # Needed for unofficial Amazon images
     #self.autoscale_group.add_user_data(install_ssm_script)

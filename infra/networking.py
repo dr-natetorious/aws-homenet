@@ -1,4 +1,3 @@
-from infra.vpce import VpcEndpointsForAWSServices
 from typing import List
 from aws_cdk import (
     core,

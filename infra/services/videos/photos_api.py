@@ -1,4 +1,4 @@
-from infra.services.identity import CertificateAuthority
+from infra.services.core.identity import CertificateAuthority
 from aws_cdk.aws_certificatemanager import Certificate
 from infra.interfaces import IVpcLandingZone
 from infra.services.videos.base_resources import RtspBaseResourcesConstruct

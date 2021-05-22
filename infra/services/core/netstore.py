@@ -14,7 +14,7 @@ class NetStoreSubnet(core.Construct):
   """
   Configure an AWS Storage Gateway.
   """
-  def __init__(self, scope: core.Construct, id: str, vpc:ec2.IVpc, **kwargs) -> None:
+  def __init__(self, scope: core.Construct, id: str, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
     core.Tags.of(self).add('backup','true')
 
@@ -27,7 +27,7 @@ class NetStoreSubnet(core.Construct):
       aws_service_name='storagegateway.amazonaws.com',
       description='Delegation to AWS StorageGateway')
 
-  def add_ec2_gateway(self)->None:
+  def add_ec2_gateway(self,vpc:ec2.IVpc)->None:
     self.storage_gateway = ec2.Instance(self,'StorageGateway',
       instance_type=ec2.InstanceType.of(
         instance_class= ec2.InstanceClass.MEMORY5,
