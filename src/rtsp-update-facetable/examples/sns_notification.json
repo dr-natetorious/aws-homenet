@@ -1,0 +1,31 @@
+{
+  "Records": [
+      {
+          "EventSource": "aws:sns",
+          "EventVersion": "1.0",
+          "EventSubscriptionArn": "arn:aws:sns:us-east-1:581361757134:HomeNet-VideoFrame-Analyzed:b7cfa802-31b4-46de-a847-388f525dd27b",
+          "Sns": {
+              "Type": "Notification",
+              "MessageId": "9aabc029-f327-5b49-9448-993648e6610f",
+              "TopicArn": "arn:aws:sns:us-east-1:581361757134:HomeNet-VideoFrame-Analyzed",
+              "Subject": null,
+              "Message": "{\n  \"Age\": {\n    \"High\": 33,\n    \"Low\": 21\n  },\n  \"BoundingBox\": {\n    \"Height\": 240.61486065387726,\n    \"Left\": 813.7657356262207,\n    \"Top\": 11.56562827527523,\n    \"Width\": 177.27612018585205\n  },\n  \"Camera\": \"live0\",\n  \"Confidence\": 99.99418640136719,\n  \"Emotions\": [\n    {\n      \"Confidence\": 97.83676147460938,\n      \"Type\": \"CALM\"\n    },\n    {\n      \"Confidence\": 1.8042527437210083,\n      \"Type\": \"ANGRY\"\n    },\n    {\n      \"Confidence\": 0.14224286377429962,\n      \"Type\": \"SURPRISED\"\n    },\n    {\n      \"Confidence\": 0.08080023527145386,\n      \"Type\": \"SAD\"\n    },\n    {\n      \"Confidence\": 0.06060231104493141,\n      \"Type\": \"DISGUSTED\"\n    },\n    {\n      \"Confidence\": 0.04703101888298988,\n      \"Type\": \"CONFUSED\"\n    },\n    {\n      \"Confidence\": 0.018654927611351013,\n      \"Type\": \"HAPPY\"\n    },\n    {\n      \"Confidence\": 0.00964853260666132,\n      \"Type\": \"FEAR\"\n    }\n  ],\n  \"FaceId\": \"885ccf59-d3a2-4da8-9f3e-72f9144e566f\",\n  \"Gender\": {\n    \"Confidence\": 99.98454284667969,\n    \"Value\": \"Male\"\n  },\n  \"ImageId\": \"78a8c167-0d78-37a3-aed8-00c81ff9b959\",\n  \"Quality\": {\n    \"Brightness\": 60.517181396484375,\n    \"Sharpness\": 73.32209777832031\n  },\n  \"S3_Uri\": \"s3://nbachmei.personal.video.v2.us-east-1/eufy/live0/2021/05/19/21/21/03.393474.png\"\n}",
+              "Timestamp": "2021-05-20T01:21:05.353Z",
+              "SignatureVersion": "1",
+              "Signature": "eiEpz3rFn+W5RSKV93HV+ZO90Df5xTp9ngs/zHlI9i/O9IIrhi5J6iV4XBLAwpA1AK+YuFqMY1GdA/TL4iGd1NmVOsv9ljSSog7K3YML9WK7wO0o9kvoCJdPgjX2uhDYXEQ3YTYtQBWzI84nP4pXV568Lp+Zi+hR9SWVW4yr3jay7KR78nWVCvmUaTvb3cw361ZTxPKgogb+9uQ8QS2LWv0ZYSN9feLW7BjaTwAkJdCFMM1N6w3R9ydnm/9WPdDsqkojsr71i3Aiucv+8+Gxbz2dGvIBWAU/EnGZ0MTepIfaLGbe68lcQpL5Ao4JddCwEtiUPcNblrOrJXA6R567xw==",
+              "SigningCertUrl": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-010a507c1833636cd94bdb98bd93083a.pem",
+              "UnsubscribeUrl": "https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-east-1:581361757134:HomeNet-VideoFrame-Analyzed:b7cfa802-31b4-46de-a847-388f525dd27b",
+              "MessageAttributes": {
+                  "HasPerson": {
+                      "Type": "String",
+                      "Value": "true"
+                  },
+                  "Camera": {
+                      "Type": "String",
+                      "Value": "live0"
+                  }
+              }
+          }
+      }
+  ]
+}

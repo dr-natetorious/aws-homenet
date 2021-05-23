@@ -1,9 +1,9 @@
+from infra.services.rtsp.analyzers.update_facetable import RtspUpdateFaceTableFunction
 from infra.services.rtsp.rtsp_connector import RtspConnectorConstruct
 from infra.services.rtsp.analyzers.persist_people import RtspPersistPeopleFunction
 from infra.services.core.identity import CertificateAuthority
 from infra.services.rtsp.photos_api import PhotosApiConstruct
 from infra.services.rtsp.resources.base_resources import RtspBaseResourcesConstruct
-#from infra.services.rtsp.rtsp_connector_service import RtspConnectorService
 from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,
@@ -20,11 +20,6 @@ class VideoSubnet(core.Construct):
       landing_zone= landing_zone,
       subnet_group_name=subnet_group_name)
 
-    # self.moon_base = RtspConnectorService(
-    #   self,'MoonBase',
-    #   infra=self.infra,
-    #   home_base='moon-base')
-
     self.rtsp_connector = RtspConnectorConstruct(self,'RtspConnector',
       infra=self.infra,
       home_base='moon-base')
@@ -34,7 +29,11 @@ class VideoSubnet(core.Construct):
       subnet_group_name= subnet_group_name,
       infra= self.infra)
 
+    # Add analytical functions...
     self.persist_people = RtspPersistPeopleFunction(self,'PersistPpl',
+      infra= self.infra)
+
+    self.persist_people = RtspUpdateFaceTableFunction(self,'UpdateFaceTable',
       infra= self.infra)
 
   def configure_dns(self,zone:r53.IHostedZone, ca:CertificateAuthority)->None:

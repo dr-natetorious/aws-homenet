@@ -1,0 +1,59 @@
+{
+    "Age": {
+      "High": 33,
+      "Low": 21
+    },
+    "BoundingBox": {
+      "Height": 240.61486065387726,
+      "Left": 813.7657356262207,
+      "Top": 11.56562827527523,
+      "Width": 177.27612018585205
+    },
+    "Camera": "live0",
+    "Confidence": 99.99418640136719,
+    "Emotions": [
+      {
+        "Confidence": 97.83676147460938,
+        "Type": "CALM"
+      },
+      {
+        "Confidence": 1.8042527437210083,
+        "Type": "ANGRY"
+      },
+      {
+        "Confidence": 0.14224286377429962,
+        "Type": "SURPRISED"
+      },
+      {
+        "Confidence": 0.08080023527145386,
+        "Type": "SAD"
+      },
+      {
+        "Confidence": 0.06060231104493141,
+        "Type": "DISGUSTED"
+      },
+      {
+        "Confidence": 0.04703101888298988,
+        "Type": "CONFUSED"
+      },
+      {
+        "Confidence": 0.018654927611351013,
+        "Type": "HAPPY"
+      },
+      {
+        "Confidence": 0.00964853260666132,
+        "Type": "FEAR"
+      }
+    ],
+    "FaceId": "885ccf59-d3a2-4da8-9f3e-72f9144e566f",
+    "Gender": {
+      "Confidence": 99.98454284667969,
+      "Value": "Male"
+    },
+    "ImageId": "78a8c167-0d78-37a3-aed8-00c81ff9b959",
+    "Quality": {
+      "Brightness": 60.517181396484375,
+      "Sharpness": 73.32209777832031
+    },
+    "S3_Uri": "s3://nbachmei.personal.video.v2.us-east-1/eufy/live0/2021/05/19/21/21/03.393474.png"
+  }
