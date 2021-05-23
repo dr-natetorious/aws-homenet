@@ -17,10 +17,11 @@ class PhotosApiConstruct(core.Construct):
   """
   Configure and deploy the account linking service
   """
-  def __init__(self, scope: core.Construct, id: str, landing_zone:IVpcLandingZone, infra:RtspBaseResourcesConstruct,subnet_group_name:str='Default', **kwargs) -> None:
+  def __init__(self, scope: core.Construct, id: str, infra:RtspBaseResourcesConstruct,subnet_group_name:str='Default', **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
     core.Tags.of(self).add(key='Source', value= PhotosApiConstruct.__name__)
       
+    # Configure the container resources...
     self.repo = assets.DockerImageAsset(self,'Repo',
       directory='src/photo-api',
       file='Dockerfile',
@@ -30,6 +31,7 @@ class PhotosApiConstruct(core.Construct):
         repository=self.repo.repository,
         tag=self.repo.image_uri.split(':')[-1])
 
+    # Configure security policies...
     role = iam.Role(self,'Role',
       assumed_by=iam.ServicePrincipal(service='lambda'),
       description='Role for RTSP Frame Inspector',
@@ -38,11 +40,17 @@ class PhotosApiConstruct(core.Construct):
         iam.ManagedPolicy.from_aws_managed_policy_name(
           managed_policy_name='service-role/AWSLambdaVPCAccessExecutionRole'
       )])
-    infra.bucket.grant_read(role)
 
+    infra.bucket.grant_read(role)
+    infra.face_table.grant_read_write_data(role)
+
+    # Define any variables for the function
     self.function_env = {
-      'BUCKET_NAME': infra.bucket.bucket_name
+      'BUCKET_NAME': infra.bucket.bucket_name,
+      'FACE_TABLE': infra.face_table.table_name,
     }
+
+    # Create the backing webapi compute ...
     self.function = lambda_.DockerImageFunction(self,'Function',
       code = code,
       role= role,
@@ -50,14 +58,16 @@ class PhotosApiConstruct(core.Construct):
       description='Python Lambda function for '+PhotosApiConstruct.__name__,
       timeout= core.Duration.seconds(30),
       tracing= lambda_.Tracing.ACTIVE,
-      vpc= landing_zone.vpc,
+      vpc= infra.landing_zone.vpc,
       memory_size=128,
       allow_all_outbound=True,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name),
-      security_groups=[landing_zone.security_group],
+      security_groups=[infra.security_group],
       environment=self.function_env,
     )
 
+    # Bind APIG to Lambda compute...
+    # Calls need to use https://photos-api.virtual.world
     self.frontend_proxy =  a.LambdaRestApi(self,'ApiGateway',
       proxy=True,
       handler=self.function,
@@ -67,7 +77,6 @@ class PhotosApiConstruct(core.Construct):
           domain_name='photos-api.virtual.world',
           certificate=Certificate.from_certificate_arn(self,'Certificate',
             certificate_arn= 'arn:aws:acm:us-east-1:581361757134:certificate/c91263e7-882e-441d-aa2f-717074aed6d0'),
-          #endpoint_type= a.EndpointType.PRIVATE,
           security_policy= a.SecurityPolicy.TLS_1_0),
         policy= iam.PolicyDocument(
           statements=[
@@ -87,13 +96,17 @@ class PhotosApiConstruct(core.Construct):
         endpoint_configuration= a.EndpointConfiguration(
           types = [ a.EndpointType.PRIVATE],
           vpc_endpoints=[
-            landing_zone.vpc_endpoints.interfaces['execute-api']
+            infra.landing_zone.vpc_endpoints.interfaces['execute-api']
           ]
         )
       ))
 
   def configure_dns(self,zone:r53.IHostedZone, ca:CertificateAuthority)->None:
-    # Define the Certificate
+    """
+    Bind the photos-api alias to the cert/friendly name.
+    You still need to register the CA cert on the local device (e.g., Group Policy)
+    Otherwise it errors out, since everything is private resources.
+    """
     friendly_name = 'photos-api.{}'.format(zone.zone_name)
     r53.ARecord(self,'PhotosApi',
       zone=zone,

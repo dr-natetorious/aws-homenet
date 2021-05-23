@@ -25,7 +25,6 @@ class VideoSubnet(core.Construct):
       home_base='moon-base')
 
     self.photos_api = PhotosApiConstruct(self,'PhotosApi',
-      landing_zone = landing_zone,
       subnet_group_name= subnet_group_name,
       infra= self.infra)
 
