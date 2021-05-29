@@ -1,3 +1,4 @@
+from infra.services.rtsp.secrets import RtspCameraSecrets
 from infra.services.rtsp.resources.time_stream import TimeStreamConstruct
 from infra.interfaces import IVpcLandingZone
 from json import loads
@@ -50,7 +51,9 @@ class RtspBaseResourcesConstruct(core.Construct):
       retention=logs.RetentionDays.ONE_DAY,
       removal_policy= core.RemovalPolicy.DESTROY)
 
+    # Add security constraints
     self.security_group = landing_zone.security_group
+    self.secrets = RtspCameraSecrets(self,'Secrets',landing_zone=landing_zone)
  
     # Create the stateful bucket
     self.bucket = s3.Bucket(self,'Bucket',

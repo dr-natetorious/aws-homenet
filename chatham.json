@@ -1,8 +1,9 @@
 [
     {"ip": "192.168.0.70", "name":"moonbase.cameras"},
     {"ip": "192.168.0.200", "name":"controller"},
-    {"ip": "192.168.0.50", "name":"animal"},
+    {"ip": "192.168.0.50", "name":"animal.tron"},
     {"ip": "192.168.0.220", "name":"frontdoor.cameras"},
     {"ip": "192.168.0.40", "name":"verizon-wifi"},
-    {"ip": "192.168.0.75", "name":"starbase.cameras"}
+    {"ip": "192.168.0.29", "name":"starbase.cameras"},
+    {"ip": "192.168.0.125", "name":"pixel-4.tron"}
 ]

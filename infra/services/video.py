@@ -21,8 +21,7 @@ class VideoSubnet(core.Construct):
       subnet_group_name=subnet_group_name)
 
     self.rtsp_connector = RtspConnectorConstruct(self,'RtspConnector',
-      infra=self.infra,
-      home_base='moon-base')
+      infra=self.infra)
 
     self.photos_api = PhotosApiConstruct(self,'PhotosApi',
       subnet_group_name= subnet_group_name,

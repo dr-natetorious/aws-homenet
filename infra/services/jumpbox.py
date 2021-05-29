@@ -1,5 +1,5 @@
 from typing import List, Mapping
-from infra.interfaces import IVpcLandingZone
+from infra.interfaces import ILandingZone, IVpcLandingZone
 from aws_cdk import (
     core,
     aws_ec2 as ec2,
@@ -7,11 +7,16 @@ from aws_cdk import (
 )
 
 class JumpBoxConstruct(core.Construct):
+  @property
+  def landing_zone(self)->IVpcLandingZone:
+    return self.__landing_zone
+
   def __init__(self, scope:core.Construct, id:str, landing_zone:IVpcLandingZone, **kwargs):
     """
     Configure Dns Resolver
     """
     super().__init__(scope,id, **kwargs)
+    self.__landing_zone = landing_zone
 
     # Only required for debugging the jumpbox
     key_pair_name = None #'nbachmei.personal.'+core.Stack.of(self).region

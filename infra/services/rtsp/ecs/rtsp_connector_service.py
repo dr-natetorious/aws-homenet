@@ -39,7 +39,6 @@ class RtspConnectorService(core.Construct):
         stream_prefix='rtsp-connector/{}'.format(home_base),
         log_group=infra.log_group),
       environment={
-        'SERVER_URI':'admin:EYE_SEE_YOU@192.168.0.70',
         'BUCKET':infra.bucket.bucket_name,
         'FRAME_ANALYZED_TOPIC': infra.frameAnalyzed.topic_arn,
         'REK_COLLECT_ID': 'homenet-hybrid-collection',
