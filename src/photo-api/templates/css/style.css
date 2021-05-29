@@ -1,0 +1,134 @@
+article, section, aside, hgroup, nav, header, footer, figure, figcaption
+{
+display: block;
+}
+
+body {
+font-family: Arial, Helvetica, sans-serif;
+}
+
+#wrapper {
+width: 960px;
+background-color: #FFF;
+margin-left:auto;
+margin-right:auto;
+}
+
+header {
+height: 200px;
+}
+
+#logo {
+}
+
+nav {
+width:960px;
+}
+
+/* Navigation code from Listamatic
+http://css.maxdesign.com.au/listamatic/horizontal03.htm
+*/
+
+nav ul {
+padding-left: 0;
+margin-left: 0;
+background-color: #209a9b;
+color: #FFF;
+float: left;
+width: 100%;
+}
+
+nav ul li {
+display: inline; }
+
+nav ul li a {
+font-size: 1em;
+padding: 10px 16px;
+background-color: #209a9b;
+color: #FFF;
+text-decoration: none;
+float: left;
+border-right: 1px solid #fff;
+}
+
+nav ul li a:hover {
+background-color: #999;
+color: #fff;
+}
+
+.highlight a{
+font-weight: 900;
+color: #444;
+}
+
+#content {
+padding-left: 40px;
+padding-right: 40px;
+padding-bottom: 20px;
+float: left;
+width:580px;
+}
+
+#content h1{
+font-size: 24px;
+padding-top: 25px;
+}
+
+#content h2 {
+font-size: 18px;
+padding-top: 25px;
+font-weight: 200;
+}
+
+#content p{
+font-size: 12px;
+padding-top:15px;
+line-height:16px;
+}
+
+section {
+}
+
+article {
+}
+
+#rightcol {
+float: left;
+padding-left: 40px;
+width: 260px;
+}
+
+#rightcol h2 {
+font-size: 18px;
+padding-top: 25px;
+font-weight: 400;
+}
+
+#rightcol h3 {
+font-size: 16px;
+padding-top: 25px;
+font-weight: 200;
+}
+
+#rightcol p {
+font-size: 12px;
+}
+
+aside {
+}
+
+footer {
+clear:both;
+height: 50px;
+}
+
+footer p {
+font-size: 11px;
+color:#333;
+padding-left: 40px;
+}
+
+footer a {
+color:#333;
+text-decoration:none;
+}
