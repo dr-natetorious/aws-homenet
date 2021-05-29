@@ -34,6 +34,7 @@ class Message:
     self.__quality=  props['Quality']
     self.__camera = props['Camera']
     self.__s3_uri = props['S3_Uri']
+    self.__base_name = props['BaseName']
 
   def as_dict(self)->dict:
     return self.__props
@@ -77,6 +78,10 @@ class Message:
   @property
   def camera_name(self)->str:
     return self.__camera
+
+  @property
+  def base_name(self)->str:
+    return self.__base_name
 
   @property
   def s3_uri(self)->str:

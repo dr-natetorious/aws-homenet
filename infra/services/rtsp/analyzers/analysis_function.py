@@ -1,6 +1,6 @@
 from typing import Mapping
 
-from aws_cdk.aws_logs import SubscriptionFilter
+from aws_cdk.aws_logs import RetentionDays, SubscriptionFilter
 from infra.services.rtsp.resources.base_resources import RtspBaseResourcesConstruct
 from aws_cdk import (
   core,
@@ -62,6 +62,7 @@ class RtspAnalysisFunction(core.Construct):
       timeout= core.Duration.minutes(1),
       tracing= lambda_.Tracing.ACTIVE,
       vpc= infra.landing_zone.vpc,
+      log_retention= RetentionDays.FIVE_DAYS,
       memory_size=128,
       allow_all_outbound=True,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=infra.subnet_group_name),
@@ -78,3 +79,4 @@ class RtspAnalysisFunction(core.Construct):
       topic= infra.frameAnalyzed,
       dead_letter_queue= self.dlq,
       filter_policy=self.filter_policy))
+    

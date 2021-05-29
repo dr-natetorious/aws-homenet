@@ -29,7 +29,8 @@ def write_message(message:Message)->None:
         value= isoparse(message.time_stamp)),
       dimensions=[
         Dimension('FaceId',message.face_id),
-        Dimension('CameraName',message.camera_name)
+        Dimension('CameraName',message.camera_name),
+        Dimension('BaseName',message.base_name),
       ]))
 
   # Add emotional responses
