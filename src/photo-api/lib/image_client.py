@@ -25,8 +25,8 @@ class ImageClient:
       bio = BytesIO(body)
       image = Image.open(bio)
 
-      shape=[(bbox.top,bbox.left),
-        (bbox.top +bbox.height, bbox.left+bbox.width)]
+      shape=[(bbox.left,bbox.top),
+        (bbox.left +bbox.width, bbox.top+bbox.height)]
       drawing = Draw(image)
       drawing.rectangle(shape, outline="red")
       
