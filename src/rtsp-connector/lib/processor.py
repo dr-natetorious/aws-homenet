@@ -115,36 +115,35 @@ class Producer:
 
     # Find any faces within the document
     try:
-      if labels.has_person:
-        face_document = rekclient.detect_s3_faces(
-          s3_object=s3_object, 
-          collection_id=collection_id)
+      face_document = rekclient.detect_s3_faces(
+        s3_object=s3_object, 
+        collection_id=collection_id)
 
-        for face in face_document.faces:
-          meta = face.summarize(image)
-          meta['S3_Uri'] = s3_object.s3_uri
-          meta['Camera'] = self.config.camera_name
-          meta['BaseName'] =self.config.base_name
+      for face in face_document.faces:
+        meta = face.summarize(image)
+        meta['S3_Uri'] = s3_object.s3_uri
+        meta['Camera'] = self.config.camera_name
+        meta['BaseName'] =self.config.base_name
 
-          response = sns.publish(
-            TopicArn=analyzed_frame_topic_arn,
-            Message=dumps(meta,indent=2,sort_keys=True),
-            MessageAttributes={
-              'Camera': {
-                'DataType':'String',
-                'StringValue':self.config.camera_name
-              },
-              'BaseName': {
-                'DataType':'String',
-                'StringValue':self.config.base_name
-              },
-              'HasPerson': {
-                'DataType':'String',
-                'StringValue':'true'
-              },
-            })
-          print(response)
-          self.__increment_counter('FaceDetected', count=len(face_document.faces))
+        response = sns.publish(
+          TopicArn=analyzed_frame_topic_arn,
+          Message=dumps(meta,indent=2,sort_keys=True),
+          MessageAttributes={
+            'Camera': {
+              'DataType':'String',
+              'StringValue':self.config.camera_name
+            },
+            'BaseName': {
+              'DataType':'String',
+              'StringValue':self.config.base_name
+            },
+            'HasPerson': {
+              'DataType':'String',
+              'StringValue':'true'
+            },
+          })
+        print(response)
+        self.__increment_counter('FaceDetected', count=len(face_document.faces))
     except Exception as error:
       print('Unable to DetectFaces in {} - {}'.format(s3_object.s3_uri, str(error)))
       return has_processed_frame

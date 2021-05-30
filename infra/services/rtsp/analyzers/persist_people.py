@@ -27,7 +27,7 @@ class RtspPersistPeopleFunction(RtspAnalysisFunction):
 
     self.function.role.add_managed_policy(
       iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='AmazonTimestreamFullAccess'))
+        managed_policy_name='AmazonTimestreamFullAccess'))
 
     self.function.add_environment(
       key='DATABASE_NAME',

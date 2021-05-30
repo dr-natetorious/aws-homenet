@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 #from infra.services.artifacts import ArtifactsConstruct
+from infra.services.fsi_construct import FsiRootConstruct
+from infra.services.fsi.resources import FsiSharedResources
 from infra.services.cicd.rtsp_connector_pipe import RtspConnectorPipeline
 from infra.services.cicd.artifacts import ArtifactsConstruct
 from infra.services.core.fs import NetworkFileSystems
@@ -152,7 +154,7 @@ class Hybrid(VpcLandingZone):
   def zone_name(self)->str:
     return 'Hybrid'
 
-class CoreServices(VpcLandingZone):
+class CoreFinancialServices(VpcLandingZone):
   """
   Represents dedicated environment with shared services
   This avoids lengthy deployments and reduces costs
@@ -167,6 +169,7 @@ class CoreServices(VpcLandingZone):
     self.vpc_endpoints.add_ssm_support()
 
     # Add services...
+    self.fsi = FsiRootConstruct(self,'FsiRoot')
     #DirectoryServicesConstruct(self,'Identity',landing_zone=self,subnet_group_name='Default')
 
     # Add JumpBox
