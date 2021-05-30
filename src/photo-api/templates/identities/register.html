@@ -1,0 +1,27 @@
+{% extends "identities.html" %}
+
+{% block pageheader %}
+Register a new Known Identity
+{% endblock %}
+
+{% block maincontent %}
+
+<script type="text/javascript">
+  function create_identity(){
+    
+  }
+</script>
+
+<article>
+    <h2>Create Identity</h2>
+    <p>Adds a new identity to the photo-api database.</p>
+  
+    <form action="javascript:create_identity()">
+      <div>
+        <label>Name</label>
+        <input type="text" id='NameTxt' />
+        <input type='submit' id='Create' value='Create'/>
+      </div>
+    </form>
+</article>
+{% endblock %}
