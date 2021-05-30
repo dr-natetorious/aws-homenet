@@ -1,12 +1,29 @@
 {% extends "master.html" %}
 
 {% block pageheader %}
-photos-api: View and Edit Known Identities
+View all Known Identities
 {% endblock %}
 
 {% block maincontent %}
 <article>
   <h2>Identities</h2>
   <p>This is the frontend for looking at image metadata, object detection, and facial recognition results.</p>
+  <ul>
+    <li>
+      {% for identity in identities %}
+      <div>
+        {{identity.display_name}} - [<a href='/-/identities/edit/{{identity.alias}}'>Edit</a>][<a href='/-/identities/faces/{{identities.alias}}'>Faces</a>]
+      </div>
+      {% endfor %}
+    </li>
+  </ul>
 </article>
+{% endblock %}
+
+{% block sidebar %}
+<h2>Options</h2>
+<h3><a href='/-/identities/register'>Register New</a></h3>
+<p>Add a new photo-api identity.</p>
+<h3><a href='/-/identities'>View All</a></h3>
+<p>List all photo-api identities.</p>
 {% endblock %}

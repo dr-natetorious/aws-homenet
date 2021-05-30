@@ -44,8 +44,13 @@ def homepage():
   return render_template('index.html')
 
 @app.route('/-/identities')
-def identities_page():
-  return render_template('identities.html')
+def identities_list():
+  identities = face_table_client.get_identities()
+  return render_template('identities.html', identities=identities)
+
+@app.route('/-/identities/register')
+def identities_create():
+  return render_template('identities/register.html')
 
 @app.route('/-/faces')
 def faces_page():
@@ -82,7 +87,7 @@ def get_css(path:str):
 
 @app.route('/identities')
 def get_identities():
-  return face_table_client.get_identities()
+  return {'Identities': face_table_client.get_identities()}
 
 @app.route('/known-faces')
 def get_known_faces():

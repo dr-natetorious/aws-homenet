@@ -2,6 +2,31 @@ from typing import List, Mapping
 import boto3
 from botocore.exceptions import ValidationError
 
+class KnownIdentity:
+  def __init__(self, props) -> None:
+    self.__alias = props['SortKey'].lower()
+    self.__display_name = props['display_name']
+    self.__props = props
+
+  @property
+  def alias(self)->str:
+    return self.__alias
+
+  @property
+  def display_name(self)->str:
+    return self.__display_name
+
+  def as_dict(self)->dict:
+    return self.__props
+
+  @staticmethod
+  def from_dynamodb_item(item:dict):
+    results = {
+      'SortKey': item['SortKey']['S'],
+      'display_name': item['display_name']['S']
+    }
+    return KnownIdentity(results)
+
 class FaceTableClient:
   def __init__(self, face_table_name:str, region_name:str) -> None:
     assert face_table_name != None, "No table name provided"
@@ -13,7 +38,7 @@ class FaceTableClient:
   def face_table_name(self)->str:
     return self.__face_table_name
 
-  def get_identities(self)->dict:
+  def get_identities(self)->List[KnownIdentity]:
     response = self.dynamodb.query(
       TableName=self.face_table_name,
       Select='ALL_ATTRIBUTES',
@@ -23,9 +48,7 @@ class FaceTableClient:
       ExpressionAttributeValues={
         ":partitionKey": {'S': 'Identity'},
       })
-    return {
-      'Identities': [x['SortKey']['S'] for x in response['Items']]
-    }
+    return [KnownIdentity.from_dynamodb_item(x) for x in response['Items']]
 
   def get_known_faces(self)->Mapping[str,List[str]]:
     response = self.dynamodb.query(
@@ -42,20 +65,21 @@ class FaceTableClient:
       'KnownFaces': [x['SortKey']['S'] for x in response['Items']]
     }
 
+  def register_identity(self, request:KnownIdentity)->dict:
+    return self.dynamodb.put_item(
+      TableName=self.face_table_name,
+      Item={
+        'PartitionKey': {'S': 'Identity'},
+        'SortKey': {'S': request.alias},
+        'display_name': {'S': request.display_name},
+      })
+
   def identify_faceid(self,identity:str, face_id:str)->dict:
     if identity == None:
       raise ValidationError('identity')
     if face_id == None:
       raise ValidationError('face_id')
     
-    self.dynamodb.put_item(
-      TableName=self.face_table_name,
-      Item={
-        'PartitionKey': {'S': 'Identity'},
-        'SortKey': {'S': identity.lower()},
-        'display_text': {'S': identity},
-      })
-
     self.dynamodb.put_item(
       TableName=self.face_table_name,
       Item={
