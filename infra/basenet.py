@@ -169,7 +169,7 @@ class CoreFinancialServices(VpcLandingZone):
     self.vpc_endpoints.add_ssm_support()
 
     # Add services...
-    self.fsi = FsiRootConstruct(self,'FsiRoot')
+    self.fsi = FsiRootConstruct(self,'FsiRoot', landing_zone=self)
     #DirectoryServicesConstruct(self,'Identity',landing_zone=self,subnet_group_name='Default')
 
     # Add JumpBox
