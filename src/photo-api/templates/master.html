@@ -2,12 +2,15 @@
 <html>
 
 <head>
-  <title>A sample HTML5 two-column layout</title>
+  <title>photos-api</title>
   <meta name="description" content="Web interface for photo metadata.">
   <meta name="keywords" content="photo-api virtual world.">
 
-  <link href="css/reset.css" rel="stylesheet" type="text/css">
-  <link href="css/style.css" rel="stylesheet" type="text/css">
+  <link href="/css/reset.css" rel="stylesheet" type="text/css">
+  <link href="/css/style.css" rel="stylesheet" type="text/css">
+
+  {% block headerext %}
+  {% endblock %}
 
   <script>
     document.createElement('article');
@@ -35,9 +38,9 @@
       <nav>
 
         <ul>
-          <li class="highlight"><a href="index.html">Home</a></li>
-          <li><a href="about.html">Identities</a></li>
-          <li><a href="tutorials.html">Associate Faces</a></li>
+          <li class="highlight"><a href="/">Home</a></li>
+          <li><a href="/-/identities">Identities</a></li>
+          <li><a href="/-/faces">Associate Faces</a></li>
         </ul>
 
       </nav>

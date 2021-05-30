@@ -1,0 +1,28 @@
+{% extends "master.html" %}
+
+{% block headerext %}
+<style>
+  ul#face-list li:nth-child(2n+1){
+    background-color: #ccc;
+  }
+</style>
+{% endblock %}
+
+{% block pageheader %}
+photos-api: View and Edit Known Faces
+{% endblock %}
+
+{% block maincontent %}
+<article>
+  <h2>Known Faces</h2>
+  <p>
+    <ul id='face-list'>
+      {% for face in faces %}
+      <li>
+        <div><img src="/-/face/preview/{{ face }}" width="32" height="32"/>Name goes here</div>
+      </li>
+      {% endfor %}
+    </ul>
+  </p>
+</article>
+{% endblock %}

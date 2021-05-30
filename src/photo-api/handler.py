@@ -4,6 +4,7 @@ from json import dumps
 from botocore.exceptions import ValidationError
 from botocore.retries import bucket
 from flask import request, redirect
+from flask.helpers import make_response
 from flask.templating import render_template
 from flask.wrappers import Response
 from werkzeug.wrappers import response
@@ -30,8 +31,29 @@ def hello_world():
   return 'Hello, World!'
 
 @app.route('/')
+def default_page():
+  return redirect('/-/home')
+
+@app.route('/-/home')
 def homepage():
   return render_template('index.html')
+
+@app.route('/-/identities')
+def identities_page():
+  return render_template('identities.html')
+
+@app.route('/-/faces')
+def faces_page():
+  faces = get_known_faces()
+  return render_template('faces.html', faces=faces['KnownFaces'])
+
+@app.route('/-/face/preview/<faceid>')
+def get_face_preview(faceid:str):
+  with open('templates/pict.png','rb')  as f:
+    image = f.read()
+    response = make_response(image)
+    response.headers.set('Content-Type', 'image/png')
+    return response
 
 @app.route('/css/<path:path>')
 def get_css(path:str):
