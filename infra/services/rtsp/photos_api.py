@@ -35,19 +35,22 @@ class PhotosApiConstruct(core.Construct):
     # Configure security policies...
     role = iam.Role(self,'Role',
       assumed_by=iam.ServicePrincipal(service='lambda'),
-      description='Role for RTSP Frame Inspector',
-      role_name='video-frame-inspector@homenet-{}'.format(core.Stack.of(self).region),
+      description='HomeNet-{}-PhotoApi'.format(infra.landing_zone.zone_name),
+      role_name='rtsp-photoapi@homenet.{}.{}'.format(
+        infra.landing_zone.zone_name,
+        core.Stack.of(self).region),
       managed_policies=[
         iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='service-role/AWSLambdaVPCAccessExecutionRole'
-      )])
+          managed_policy_name='service-role/AWSLambdaVPCAccessExecutionRole'),
+        iam.ManagedPolicy.from_aws_managed_policy_name(
+          managed_policy_name='AmazonS3ReadOnlyAccess')
+      ])
 
     infra.bucket.grant_read(role)
     infra.face_table.grant_read_write_data(role)
 
     # Define any variables for the function
     self.function_env = {
-      'BUCKET_NAME': infra.bucket.bucket_name,
       'FACE_TABLE': infra.face_table.table_name,
       'REGION': core.Stack.of(self).region,
     }
@@ -76,6 +79,7 @@ class PhotosApiConstruct(core.Construct):
       handler=self.function,
       options=a.RestApiProps(
         description='Photo-Api proxy for '+self.function.function_name,
+        binary_media_types=['image/png','image/jpg','image/bmp'],
         domain_name= a.DomainNameOptions(
           domain_name='photos-api.virtual.world',
           certificate=Certificate.from_certificate_arn(self,'Certificate',
@@ -97,10 +101,10 @@ class PhotosApiConstruct(core.Construct):
           ]
         ),
         endpoint_configuration= a.EndpointConfiguration(
-          types = [ a.EndpointType.PRIVATE],
-          vpc_endpoints=[
-            infra.landing_zone.vpc_endpoints.interfaces['execute-api']
-          ]
+          types = [ a.EndpointType.REGIONAL],
+          #vpc_endpoints=[
+          #  infra.landing_zone.vpc_endpoints.interfaces['execute-api']
+          #]
         )
       ))
 

@@ -37,6 +37,10 @@ ARG FUNCTION_DIR
 # Set working directory to function root directory
 WORKDIR ${FUNCTION_DIR}
 
+RUN yum -y update && yum -y install \ 
+  mesa-libGL.x86_64 \
+  opencv-python.x86_64 
+  
 # Copy in the build image dependencies
 COPY --from=build-image ${FUNCTION_DIR} ${FUNCTION_DIR}
 
