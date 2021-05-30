@@ -1,12 +1,10 @@
 import builtins
 from infra.interfaces import IVpcLandingZone
 from infra.services.fsi.collector import FsiCollectorConstruct
-from typing import Mapping
+from infra.services.fsi.account_linking import FsiAccountLinkingGateway
 from infra.services.fsi.resources import FsiSharedResources
 from aws_cdk import (
   core,
-  aws_sns as sns,
-  aws_iam as iam,
 )
 
 class FsiRootConstruct(core.Construct):
@@ -16,3 +14,4 @@ class FsiRootConstruct(core.Construct):
 
     self.resources = FsiSharedResources(self,'Resources', landing_zone=landing_zone)
     FsiCollectorConstruct(self,'Collector', resources=self.resources)
+    FsiAccountLinkingGateway(self,'AccountLinking', resources=self.resources)

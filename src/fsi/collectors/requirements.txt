@@ -1,0 +1,3 @@
+boto3
+td-ameritrade-python-api
+ratelimitqueue
