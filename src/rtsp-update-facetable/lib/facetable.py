@@ -2,7 +2,7 @@ from typing import Any, List, Mapping
 import boto3
 from lib.message import Message
 
-bound_box_precision = 4
+precision = 4
 
 class FaceTable:
   def __init__(self, table_name:str, region_name:str) -> None:
@@ -34,12 +34,15 @@ class FaceTable:
           's3_uri': {'S': message.s3_uri },
           'camera_name': {'S': message.camera_name.lower() },
           'base_name': {'S': message.base_name.lower() },
+          'sharpness': {'N': str(round(message.quality['Sharpness'], precision))},
+          'brightness': {'N': str(round(message.quality['Brightness'], precision))},
+          'confidence': {'N': str(round(message.confidence, precision))},
           'bounding_box': {'M': 
             {
-              'top': { 'N': str(round(message.bounding_box['Top'],bound_box_precision)) },
-              'left': { 'N': str(round(message.bounding_box['Left'],bound_box_precision)) },
-              'height': { 'N': str(round(message.bounding_box['Height'],bound_box_precision)) },
-              'height': { 'N': str(round(message.bounding_box['Width'],bound_box_precision)) },
+              'top': { 'N': str(round(message.bounding_box['Top'],precision)) },
+              'left': { 'N': str(round(message.bounding_box['Left'],precision)) },
+              'height': { 'N': str(round(message.bounding_box['Height'],precision)) },
+              'width': { 'N': str(round(message.bounding_box['Width'],precision)) },
             }
           }
         })

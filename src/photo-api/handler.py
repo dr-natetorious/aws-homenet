@@ -1,16 +1,20 @@
+from typing import Any, List, Mapping
+from lib.image_client import ImageClient
 import boto3
 from os import environ
-from json import dumps
-from botocore.exceptions import ValidationError
-from botocore.retries import bucket
-from flask import request, redirect
+from flask import  redirect
 from flask.helpers import make_response
 from flask.templating import render_template
 from flask.wrappers import Response
-from werkzeug.wrappers import response
+from lib.face_table_client import FaceTableClient
 
-dynamodb = boto3.client('dynamodb')
-face_table_name = environ.get('FACE_TABLE')
+# Initialize the clients...
+face_table_client = FaceTableClient(
+  face_table_name=environ.get('FACE_TABLE'),
+  region_name= environ.get('REGION'))
+
+image_client = ImageClient(
+  region_name= environ.get('REGION'))
 
 def init_flask_for_env():
   """
@@ -49,11 +53,19 @@ def faces_page():
 
 @app.route('/-/face/preview/<faceid>')
 def get_face_preview(faceid:str):
-  with open('templates/pict.png','rb')  as f:
-    image = f.read()
-    response = make_response(image)
-    response.headers.set('Content-Type', 'image/png')
-    return response
+  images:List[Mapping[str,Any]] = face_table_client.get_face_images(faceid)['Images']
+  best_image = images[-1]
+
+  content = image_client.fetch_image(best_image['s3_uri'], best_image['bounding_box'])
+  response = make_response(content)
+  response.headers.set('Content-Type', 'image/png')
+  return response
+
+  # with open('templates/pict.png','rb')  as f:
+  #   image = f.read()
+  #   response = make_response(image)
+  #   response.headers.set('Content-Type', 'image/png')
+  #   return response
 
 @app.route('/css/<path:path>')
 def get_css(path:str):
@@ -62,56 +74,19 @@ def get_css(path:str):
 
 @app.route('/identities')
 def get_identities():
-  response = dynamodb.query(
-    TableName=face_table_name,
-    Select='ALL_ATTRIBUTES',
-    Limit=1000,
-    ReturnConsumedCapacity='NONE',
-    KeyConditionExpression="PartitionKey= :partitionKey",
-    ExpressionAttributeValues={
-      ":partitionKey": {'S': 'Identity'},
-    })
-  return {
-    'Identities': [x['SortKey']['S'] for x in response['Items']]
-  }
+  return face_table_client.get_identities()
 
 @app.route('/known-faces')
 def get_known_faces():
-  response = dynamodb.query(
-    TableName=face_table_name,
-    Select='ALL_ATTRIBUTES',
-    Limit=1000,
-    ReturnConsumedCapacity='NONE',
-    KeyConditionExpression="PartitionKey= :partitionKey",
-    ExpressionAttributeValues={
-      ":partitionKey": {'S': 'KnownFaceId'},
-    })
+  return face_table_client.get_known_faces()
 
-  return {
-    'KnownFaces': [x['SortKey']['S'] for x in response['Items']]
-  }
-
-@app.route('/associate/<identity>/<face_id>')
+@app.route('/identity-face/<identity>/<face_id>')
 def associate_faceid(identity:str, face_id:str):
-  if identity == None:
-    raise ValidationError('identity')
-  if face_id == None:
-    raise ValidationError('face_id')
-  
-  dynamodb.put_item(
-    TableName=face_table_name,
-    Item={
-      'PartitionKey': {'S': 'Identity'},
-      'SortKey': {'S': identity.lower()},
-      'display_text': {'S': identity},
-    })
+  return face_table_client.identify_faceid(identity,face_id)
 
-  dynamodb.put_item(
-    TableName=face_table_name,
-    Item={
-      'PartitionKey': {'S': 'Identity::'+identity.lower()},
-      'SortKey': {'S': face_id.lower()},
-    })
+@app.route('/face-images/<face_id>')
+def get_face_images(face_id:str):
+  return face_table_client.get_face_images(face_id)
 
 if __name__ == '__main__':
   app.run(debug=True)

@@ -1,3 +1,4 @@
+from aws_cdk.aws_logs import RetentionDays
 from infra.services.core.identity import CertificateAuthority
 from aws_cdk.aws_certificatemanager import Certificate
 from infra.interfaces import IVpcLandingZone
@@ -48,6 +49,7 @@ class PhotosApiConstruct(core.Construct):
     self.function_env = {
       'BUCKET_NAME': infra.bucket.bucket_name,
       'FACE_TABLE': infra.face_table.table_name,
+      'REGION': core.Stack.of(self).region,
     }
 
     # Create the backing webapi compute ...
@@ -59,6 +61,7 @@ class PhotosApiConstruct(core.Construct):
       timeout= core.Duration.seconds(30),
       tracing= lambda_.Tracing.ACTIVE,
       vpc= infra.landing_zone.vpc,
+      log_retention= RetentionDays.FIVE_DAYS,
       memory_size=128,
       allow_all_outbound=True,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name),

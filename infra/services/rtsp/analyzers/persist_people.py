@@ -1,16 +1,10 @@
 from typing import Mapping
 from infra.services.rtsp.analyzers.analysis_function import RtspAnalysisFunction
 from infra.services.rtsp.resources.base_resources import RtspBaseResourcesConstruct
-from infra.interfaces import IVpcLandingZone
 from aws_cdk import (
   core,
-  aws_ec2 as ec2,
   aws_sns as sns,
-  aws_sqs as sqs,
   aws_iam as iam,
-  aws_lambda as lambda_,
-  aws_lambda_event_sources as events,
-  aws_ecr_assets as assets,
 )
 
 class RtspPersistPeopleFunction(RtspAnalysisFunction):
