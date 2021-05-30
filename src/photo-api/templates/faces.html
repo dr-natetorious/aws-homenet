@@ -19,7 +19,7 @@ photos-api: View and Edit Known Faces
     <ul id='face-list'>
       {% for face in faces %}
       <li>
-        <div><img src="/-/face/preview/{{ face }}" width="32" height="32"/>Name goes here</div>
+        <div><img src="/-/face/preview/{{ face }}" width="64" height="64"/>{{face}}</div>
       </li>
       {% endfor %}
     </ul>

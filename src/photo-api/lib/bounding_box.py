@@ -1,3 +1,6 @@
+from typing import List, Tuple
+
+
 class BoundingBox:
   def __init__(self, props:dict)->None:
     self.__width = float(props['width']) if 'width' in props else 0
@@ -24,6 +27,13 @@ class BoundingBox:
   @property
   def top(self)->float:
     return self.__top
+
+  @property
+  def shape(self)->List[Tuple[float,float]]:
+    return [
+      (self.left,self.top),
+      (self.left +self.width, self.top+self.height)
+    ]
 
   @property
   def is_usable(self)->bool:

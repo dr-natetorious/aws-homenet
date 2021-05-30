@@ -1,3 +1,4 @@
+from lib.bounding_box import BoundingBox
 from typing import Any, List, Mapping
 from lib.image_client import ImageClient
 import boto3
@@ -56,8 +57,15 @@ def get_face_preview(faceid:str):
   images:List[Mapping[str,Any]] = face_table_client.get_face_images(faceid)['Images']
   best_image = images[-1]
 
-  content = image_client.fetch_image(best_image['s3_uri'], best_image['bounding_box'])
-  response = make_response(content)
+  content = image_client.fetch_image(best_image['s3_uri'])
+  bbox = BoundingBox(best_image['bounding_box'])
+  if bbox.is_usable:
+    content = image_client.cut_bounding_box(content, bbox)
+    content = image_client.resize_image(content,(64,64))
+  else:
+    content = image_client.resize_image(content,(64,64))
+
+  response = make_response(content.read())
   response.headers.set('Content-Type', 'image/png')
   return response
 
