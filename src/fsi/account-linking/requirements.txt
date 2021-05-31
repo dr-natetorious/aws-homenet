@@ -2,3 +2,4 @@ flask
 requests
 flask-lambda
 boto3
+td-ameritrade-python-api

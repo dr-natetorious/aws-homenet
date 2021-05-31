@@ -22,8 +22,15 @@ class FsiSharedResources(core.Construct):
     super().__init__(scope, id)
     self.__landing_zone = landing_zone
 
-    self.dns_zone = r53.PrivateHostedZone.from_private_hosted_zone_id(self, 'DnsZone',
-      private_hosted_zone_id='Z020781536ZD8Y9HV5BO8')
+    # self.dns_zone = r53.PrivateHostedZone.from_hosted_zone_attributes(self, 'DnsZone',
+    #   hosted_zone_id='Z020781536ZD8Y9HV5BO8',
+    #   zone_name='fis.virtual.world')
+
+    self.ameritrade_dns_zone = r53.PrivateHostedZone(self,'Trader',
+      zone_name='trader.fsi'.format(
+        landing_zone.zone_name.lower()),
+      vpc=landing_zone.vpc,
+      comment='HomeNet Financial Services Domain')
 
     # Create a key and delegate access to IAM...
     self.key = kms.Key(self,'Key',
@@ -54,6 +61,10 @@ class FsiSharedResources(core.Construct):
     # Setup the EKS cluster....
     master_role = iam.Role(self,'MasterRole',
       assumed_by=iam.AccountPrincipal(account_id=core.Stack.of(self).account),
+      managed_policies=[
+        iam.ManagedPolicy.from_aws_managed_policy_name(
+          managed_policy_name='AmazonEKSClusterPolicy')
+      ],
       role_name='fsi-eks-master-role@HomeNet-{}.{}'.format(
         landing_zone.zone_name,
         core.Stack.of(self).region).lower())
@@ -62,7 +73,9 @@ class FsiSharedResources(core.Construct):
       assumed_by=iam.ServicePrincipal(service='eks-fargate-pods'),
       managed_policies=[
         iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='AmazonEKSFargatePodExecutionRolePolicy')
+          managed_policy_name='AmazonEKSFargatePodExecutionRolePolicy'),
+        iam.ManagedPolicy.from_aws_managed_policy_name(
+          managed_policy_name='AmazonEKSClusterPolicy')
       ],
       role_name='fsi-eks-cluster-role@HomeNet-{}.{}'.format(
         landing_zone.zone_name,

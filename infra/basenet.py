@@ -59,7 +59,7 @@ class VpcLandingZone(IVpcLandingZone):
         connection= ec2.Port.all_icmp(),
         description='Grant icmp from anywhere')
 
-    for address in ('72.88.152.62/24', '10.0.0.0/8','192.168.0.0/16'):
+    for address in ('72.90.160.65/32', '10.0.0.0/8','192.168.0.0/16'):
       self.security_group.add_ingress_rule(
         peer= ec2.Peer.ipv4(address),
         connection= ec2.Port.all_traffic(),
@@ -193,7 +193,7 @@ class Chatham(ILandingZone):
 
   def __init__(self, scope: core.Construct, id: str,vpc:ec2.IVpc, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
-    ip_address='72.88.152.62'
+    ip_address='72.90.160.65'
     core.Tags.of(self).add('Name','Chatham: '+ip_address)
 
     customer_gateway = ec2.CfnCustomerGateway(self,'CustomerGateway',

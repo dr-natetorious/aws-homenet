@@ -52,7 +52,7 @@ class ResolverSubnet(core.Construct):
       allow_all_outbound=True,
       description='Dns Resolver Security Group')
 
-    for address in ['10.0.0.0/8', '192.168.0.0/16', '72.88.152.62/32']:
+    for address in ['10.0.0.0/8', '192.168.0.0/16', '72.90.160.65/32']:
       self.sg.add_ingress_rule(peer= ec2.Peer.ipv4(address),
         connection= ec2.Port.tcp(53),
         description='Allow Dns via TCP from '+address)

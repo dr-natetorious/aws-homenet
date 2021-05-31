@@ -1,10 +1,11 @@
-import urllib
+from tempfile import gettempdir
 import time
-from json import dumps
+from json import dumps, loads
 from datetime import datetime
-from os import environ
+from os import environ, path
 from logging import getLogger
 import requests
+from td.client import TDClient
 
 logger = getLogger(__name__)
 
@@ -74,3 +75,26 @@ class AccountLinkingClient:
     token_dict['refresh_token_expires_at_date'] = datetime.utcfromtimestamp(refresh_token_expire).isoformat()
     
     return token_dict
+
+  def grab_refresh_token(self, tda_creds:dict)->TDClient:
+    
+    # Write the creds int a known location...
+    output = path.join(gettempdir(),'creds.json')
+    with open(output,'w') as f:
+      f.write(dumps(tda_creds))
+
+    # Fetch the offline token...
+    client = TDClient(
+      credentials_path=output,
+      client_id=self.client_id,
+      redirect_uri=self.redirect_uri)
+
+    if not client.login():
+      raise ValueError('Unable to login')
+    if not client.grab_refresh_token():
+      raise ValueError('Unable to grab_refresh_token')
+
+    # Read the cached offline token...    
+    with open(output,'r') as f:
+      token = f.read()
+      return loads(token)

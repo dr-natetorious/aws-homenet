@@ -93,7 +93,7 @@ class PhotosApiConstruct(core.Construct):
               resources=['*'],
               conditions={
                 'IpAddress':{
-                  'aws:SourceIp': ['10.0.0.0/8','192.168.0.0/16','72.88.152.62/32']
+                  'aws:SourceIp': ['10.0.0.0/8','192.168.0.0/16','72.90.160.65/32']
                 }
               }
             )

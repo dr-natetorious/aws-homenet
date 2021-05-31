@@ -1,6 +1,6 @@
 import boto3
 import urllib
-from os import environ
+from os import environ, link
 from json import dumps
 from flask import request, redirect
 from tda import AccountLinkingClient
@@ -19,7 +19,7 @@ def init_flask_for_env():
 
 app = init_flask_for_env()
 linkingClient = AccountLinkingClient()
-secrets = boto3.client('secretsmanager')
+secrets = boto3.client('secretsmanager', region_name='us-east-2')
 secret_id=environ.get('TDA_SECRET_ID')
 
 @app.route('/heartbeat')
@@ -42,10 +42,11 @@ def login():
 def connect():
   code = request.args.get('code')
   tda_creds = linkingClient.create_credentials_from_urlcode(code)
+  refresh_creds = linkingClient.grab_refresh_token(tda_creds)
 
   response = secrets.update_secret(
     SecretId=secret_id,
-    SecretString=dumps(tda_creds)
+    SecretString=dumps(refresh_creds),
   )
 
   return dumps(response)

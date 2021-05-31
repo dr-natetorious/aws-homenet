@@ -14,7 +14,7 @@ from aws_cdk import (
   aws_ssm as ssm,
 )
 
-class FsiAccountLinkingGateway(core.Construct):
+class FsiAmeritradeAuthGateway(core.Construct):
   """
   Configure and deploy the account linking service
   """
@@ -61,8 +61,8 @@ class FsiAccountLinkingGateway(core.Construct):
       role= role,
       function_name='HomeNet-{}-Fsi-{}'.format(
         resources.landing_zone.zone_name,
-        FsiAccountLinkingGateway.__name__),
-      description='Python Lambda function for '+FsiAccountLinkingGateway.__name__,
+        FsiAmeritradeAuthGateway.__name__),
+      description='Python Lambda function for '+FsiAmeritradeAuthGateway.__name__,
       timeout= core.Duration.seconds(30),
       tracing= lambda_.Tracing.ACTIVE,
       vpc= resources.landing_zone.vpc,
@@ -81,9 +81,9 @@ class FsiAccountLinkingGateway(core.Construct):
       options=a.RestApiProps(
         description='Hosts the Ameritrade Auth Callback  via '+self.function.function_name,
         domain_name= a.DomainNameOptions(
-          domain_name='account-linking.fsi.virtual.world',
+          domain_name='auth.ameritrade.fsi',
           certificate=Certificate.from_certificate_arn(self,'Certificate',
-           certificate_arn= 'arn:aws:acm:us-east-2:581361757134:certificate/203d0a7d-9ace-41a8-8667-f2f450fa2211'),
+           certificate_arn= 'arn:aws:acm:us-east-2:581361757134:certificate/02c12e3f-30e9-441b-a9c5-510ecfaa41e8'),
           security_policy= a.SecurityPolicy.TLS_1_0),
         policy= iam.PolicyDocument(
           statements=[
@@ -94,7 +94,7 @@ class FsiAccountLinkingGateway(core.Construct):
               resources=['*'],
               conditions={
                 'IpAddress':{
-                  'aws:SourceIp': ['10.0.0.0/8','192.168.0.0/16','72.88.152.62/32']
+                  'aws:SourceIp': ['10.0.0.0/8','192.168.0.0/16','72.90.160.65/32']
                 }
               }
             )
@@ -104,3 +104,9 @@ class FsiAccountLinkingGateway(core.Construct):
           types = [ a.EndpointType.REGIONAL],
         )
       ))
+
+    # Register Dns Name
+    r53.ARecord(self,'AliasRecord',
+      zone=resources.ameritrade_dns_zone,
+      record_name='auth.%s' % resources.ameritrade_dns_zone.zone_name,
+      target= r53.RecordTarget.from_alias(dns_targets.ApiGateway(self.frontend_proxy)))
