@@ -1,4 +1,5 @@
 import builtins
+from infra.services.fsi.earnings_api import FsiEarningsGateway
 from infra.interfaces import IVpcLandingZone
 from infra.services.fsi.collector import FsiCollectorConstruct
 from infra.services.fsi.account_linking import FsiAmeritradeAuthGateway
@@ -15,3 +16,4 @@ class FsiRootConstruct(core.Construct):
     self.resources = FsiSharedResources(self,'Resources', landing_zone=landing_zone)
     FsiAmeritradeAuthGateway(self,'AmeritradeAuth', resources=self.resources)
     FsiCollectorConstruct(self,'Collector', resources=self.resources)
+    FsiEarningsGateway(self,'EarningsGateway',resources=self.resources)
