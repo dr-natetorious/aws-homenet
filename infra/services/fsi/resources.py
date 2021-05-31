@@ -26,7 +26,7 @@ class FsiSharedResources(core.Construct):
     #   hosted_zone_id='Z020781536ZD8Y9HV5BO8',
     #   zone_name='fis.virtual.world')
 
-    self.ameritrade_dns_zone = r53.PrivateHostedZone(self,'Trader',
+    self.trader_dns_zone = r53.PrivateHostedZone(self,'Trader',
       zone_name='trader.fsi'.format(
         landing_zone.zone_name.lower()),
       vpc=landing_zone.vpc,

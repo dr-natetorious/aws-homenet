@@ -81,9 +81,9 @@ class FsiAmeritradeAuthGateway(core.Construct):
       options=a.RestApiProps(
         description='Hosts the Ameritrade Auth Callback  via '+self.function.function_name,
         domain_name= a.DomainNameOptions(
-          domain_name='auth.ameritrade.fsi',
+          domain_name='auth.trader.fsi',
           certificate=Certificate.from_certificate_arn(self,'Certificate',
-           certificate_arn= 'arn:aws:acm:us-east-2:581361757134:certificate/02c12e3f-30e9-441b-a9c5-510ecfaa41e8'),
+           certificate_arn= 'arn:aws:acm:us-east-2:581361757134:certificate/0d1fc756-ebd6-4660-83a8-814c0976a8c2'),
           security_policy= a.SecurityPolicy.TLS_1_0),
         policy= iam.PolicyDocument(
           statements=[
@@ -107,6 +107,6 @@ class FsiAmeritradeAuthGateway(core.Construct):
 
     # Register Dns Name
     r53.ARecord(self,'AliasRecord',
-      zone=resources.ameritrade_dns_zone,
-      record_name='auth.%s' % resources.ameritrade_dns_zone.zone_name,
+      zone=resources.trader_dns_zone,
+      record_name='auth.%s' % resources.trader_dns_zone.zone_name,
       target= r53.RecordTarget.from_alias(dns_targets.ApiGateway(self.frontend_proxy)))
