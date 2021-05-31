@@ -183,15 +183,39 @@ class CoreFinancialServices(VpcLandingZone):
   def zone_name(self)->str:
     return 'CoreSvc'
 
+class ChathamTunnelingConfig:
+  
+  @staticmethod
+  def hybrid_network()->List[ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty]:
+    return [
+      ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty(
+        pre_shared_key='EYE_SEE_YOU',
+        tunnel_inside_cidr='169.254.50.92/30'),
+      ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty(
+        pre_shared_key='EYE_SEE_YOU',
+        tunnel_inside_cidr='169.254.51.92/30'),
+    ]
+
+  @staticmethod
+  def coresvc_network()->List[ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty]:
+    return [
+      ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty(
+        pre_shared_key='EYE_SEE_YOU',
+        tunnel_inside_cidr='169.254.52.92/30'),
+      ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty(
+        pre_shared_key='EYE_SEE_YOU',
+        tunnel_inside_cidr='169.254.53.92/30'),
+    ]
+
 class Chatham(ILandingZone):
   """
   Represents the Site-to-Site for House
   """
   @property
   def zone_name(self)->str:
-    raise 'Chatham'
+    raise 'Chatham'  
 
-  def __init__(self, scope: core.Construct, id: str,vpc:ec2.IVpc, **kwargs) -> None:
+  def __init__(self, scope: core.Construct, id: str,vpc:ec2.IVpc, tunneling:List[ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty], **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
     ip_address='72.90.160.65'
     core.Tags.of(self).add('Name','Chatham: '+ip_address)
@@ -241,14 +265,15 @@ class Chatham(ILandingZone):
       type='ipsec.1',
       tags=[core.CfnTag(key='Name',value='Chatham')],
       vpn_gateway_id= vpn_gateway.ref,
-      vpn_tunnel_options_specifications=[
-        ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty(
-          pre_shared_key='EYE_SEE_YOU',
-          tunnel_inside_cidr='169.254.50.92/30'),
-        ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty(
-          pre_shared_key='EYE_SEE_YOU',
-          tunnel_inside_cidr='169.254.51.92/30'),
-      ])
+      vpn_tunnel_options_specifications= tunneling)
+      # vpn_tunnel_options_specifications=[
+      #   ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty(
+      #     pre_shared_key='EYE_SEE_YOU',
+      #     tunnel_inside_cidr='169.254.50.92/30'),
+      #   ec2.CfnVPNConnection.VpnTunnelOptionsSpecificationProperty(
+      #     pre_shared_key='EYE_SEE_YOU',
+      #     tunnel_inside_cidr='169.254.51.92/30'),
+      # ])
 
     ec2.CfnVPNConnectionRoute(self,'RouteHomebound',
       destination_cidr_block='192.168.0.0/16',

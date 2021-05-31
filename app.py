@@ -3,7 +3,7 @@ import os.path
 from typing import List
 from aws_cdk import core
 from infra.interfaces  import ILandingZone
-from infra.basenet import Chatham, CoreFinancialServices, Hybrid, VpcPeeringOwner, VpcPeeringReceiver, Artifactory
+from infra.basenet import Chatham, ChathamTunnelingConfig, CoreFinancialServices, Hybrid, VpcPeeringOwner, VpcPeeringReceiver, Artifactory
 src_root_dir = os.path.join(os.path.dirname(__file__))
 
 us_east_1 = core.Environment(region="us-east-1", account='581361757134')
@@ -19,10 +19,15 @@ class NetworkingApp(core.App):
     # Deploy core services
     # Don't touch this identifier. It autogen 'vpc-id' is currently sacred :'(
     self.core_svc = CoreFinancialServices(self,'HomeNet-CoreSvc', env=us_east_2)
+    self.core_2_chatham = Chatham(self,'HomeNet-CoreSvc-Chatham', 
+      vpc=self.core_svc.vpc, env=us_east_2,
+      tunneling= ChathamTunnelingConfig.coresvc_network())
 
     # Main setup
     self.hybrid = Hybrid(self,'HomeNet-Hybrid', env=us_east_1)
-    self.chatham = Chatham(self,'HomeNet-Chatham', vpc=self.hybrid.vpc, env=us_east_1)
+    self.chatham = Chatham(self,'HomeNet-Chatham', 
+      vpc=self.hybrid.vpc, env=us_east_1,
+      tunneling= ChathamTunnelingConfig.hybrid_network())
 
     # Link the Vpcs...
     VpcPeeringOwner(self,'HomeNet-Peering',

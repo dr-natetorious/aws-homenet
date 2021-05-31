@@ -6,6 +6,9 @@ cdk deploy -a /files/app.py --require-approval never HomeNet-Artifacts
 cdk diff -a /files/app.py --require-approval never HomeNet-CoreSvc
 cdk deploy -a /files/app.py --require-approval never HomeNet-CoreSvc
 
+cdk diff -a /files/app.py --require-approval never HomeNet-CoreSvc-Chatham
+cdk deploy -a /files/app.py --require-approval never HomeNet-CoreSvc-Chatham
+
 cdk diff -a /files/app.py --require-approval never HomeNet-Hybrid
 cdk deploy -a /files/app.py --require-approval never HomeNet-Hybrid
 
