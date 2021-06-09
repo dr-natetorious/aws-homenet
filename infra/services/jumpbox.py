@@ -1,9 +1,13 @@
 from typing import List, Mapping
+
+from aws_cdk.aws_route53 import IHostedZone, RecordTarget
 from infra.interfaces import ILandingZone, IVpcLandingZone
 from aws_cdk import (
     core,
     aws_ec2 as ec2,
     aws_iam as iam,
+    aws_route53 as r53,
+    aws_route53_targets as r53t,
 )
 
 class JumpBoxConstruct(core.Construct):
@@ -13,13 +17,13 @@ class JumpBoxConstruct(core.Construct):
 
   def __init__(self, scope:core.Construct, id:str, landing_zone:IVpcLandingZone, **kwargs):
     """
-    Configure Dns Resolver
+    Configure emphemeral jumpbox for testing
     """
     super().__init__(scope,id, **kwargs)
     self.__landing_zone = landing_zone
 
     # Only required for debugging the jumpbox
-    key_pair_name = None #'nbachmei.personal.'+core.Stack.of(self).region
+    key_pair_name = 'nbachmei.personal.'+core.Stack.of(self).region
 
     role = iam.Role(self,'Role',
       assumed_by=iam.ServicePrincipal(
@@ -41,9 +45,17 @@ class JumpBoxConstruct(core.Construct):
       user_data_causes_replacement=True,
       security_group= landing_zone.security_group,
       vpc_subnets= ec2.SubnetSelection(subnet_group_name='Default'),
-      machine_image= self.machine_image) 
+      machine_image= self.machine_image)
 
     core.Tags.of(self.instance).add('domain','virtual.world')
+
+  def add_dns_records(self,zone:IHostedZone, resource_name:str)->None:
+    r53.ARecord(self,'DnsRecord',
+      zone=zone,
+      comment='Name Record for '+JumpBoxConstruct.__name__,
+      record_name='{}.{}'.format(resource_name,zone.zone_name),
+      target=RecordTarget(
+        values= [self.instance.instance_private_ip] ))
 
   @property
   def machine_image(self)->ec2.IMachineImage:

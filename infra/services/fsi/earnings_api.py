@@ -11,7 +11,6 @@ from aws_cdk import (
   aws_route53 as r53,
   aws_route53_targets as dns_targets,
   aws_logs as logs,
-  aws_ssm as ssm,
   aws_dynamodb as d,
 )
 

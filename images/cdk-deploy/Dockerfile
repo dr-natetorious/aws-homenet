@@ -1,11 +1,9 @@
 FROM python:3.8
 
-RUN apt-get -y update && apt-get -y install npm zip \
-  && npm install -g aws-cdk \
-  && /usr/local/bin/python -m pip install --upgrade pip
+RUN apt-get -y update && apt-get -y install npm zip curl \
+  && npm install -g aws-cdk
 
 RUN /usr/local/bin/python -m pip install --upgrade pip
-RUN apt-get -y install curl
 RUN curl -sSL https://get.docker.com/ | sh
 
 COPY requirements.txt .

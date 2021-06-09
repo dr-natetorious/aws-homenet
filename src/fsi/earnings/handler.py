@@ -1,5 +1,6 @@
 from rttnewsclient import RttNewsEarningsClient
 from json import dumps
+from flask import Response
 
 def init_flask_for_env():
   """
@@ -22,5 +23,7 @@ def hello_world():
 
 @app.route('/<date_str>')
 def fetch_by_date(date_str):
-  return dumps([x.to_hash() for x in calendar.get_for_date(date_str=date_str)])
+  return Response(
+    response=dumps([x.to_hash() for x in calendar.get_for_date(date_str=date_str)]),
+    content_type='application/json')
   

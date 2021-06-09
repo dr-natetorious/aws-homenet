@@ -16,7 +16,7 @@ analyzed_frame_topic_arn = get_value('FRAME_ANALYZED_TOPIC')
 frame_size=(1920,1080)
 default_sampling_rate = 1#0.05
 delay_frame_processed = 30
-delay_no_frame=5
+delay_no_frame=0.5
 
 s3 = boto3.client('s3', region_name=region_name)
 sns = boto3.client('sns',region_name=region_name)
@@ -40,9 +40,10 @@ class Producer:
     self.__config = config
 
   def invoke(self)->bool:
-    with Client(rtsp_server_uri=self.config.server_uri) as client:
+    with Client(rtsp_server_uri=self.config.server_uri, verbose=False) as client:
       if not client.isOpened():
-        print('rtsp server is not running.')
+        print('{} server is not running.'.format(self.config.server_uri))
+        sleep(delay_no_frame)
         return False
 
       image = client.read()

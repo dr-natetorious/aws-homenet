@@ -4,7 +4,7 @@ from infra.services.fsi_construct import FsiRootConstruct
 from infra.services.fsi.resources import FsiSharedResources
 from infra.services.cicd.rtsp_connector_pipe import RtspConnectorPipeline
 from infra.services.cicd.artifacts import ArtifactsConstruct
-from infra.services.core.fs import NetworkFileSystems
+from infra.services.core.fs import NetworkFileSystemsConstruct
 from infra.services.jumpbox import JumpBoxConstruct
 import os.path
 from typing import List
@@ -136,7 +136,7 @@ class Hybrid(VpcLandingZone):
     ResolverSubnet(self,'NameResolution', landing_zone=self)    
 
     # Add filesystems...
-    nfs = NetworkFileSystems(self,'NetFs',landing_zone=self, ds=ds)
+    nfs = NetworkFileSystemsConstruct(self,'NetFs',landing_zone=self, ds=ds)
     nfs.configure_dns(hosts.virtual_world)
 
     # Add app-level services...
@@ -144,7 +144,8 @@ class Hybrid(VpcLandingZone):
     video.configure_dns(zone=hosts.virtual_world, ca=ca)
 
     # Add JumpBox
-    JumpBoxConstruct(self,'JumpBox',landing_zone=self)
+    jumpbox = JumpBoxConstruct(self,'JumpBox',landing_zone=self)
+    jumpbox.add_dns_records(zone=hosts.virtual_world,resource_name='devbox')
 
   @property
   def cidr_block(self)->str:

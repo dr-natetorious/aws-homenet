@@ -4,14 +4,14 @@ from Collector import fetch_all_instruments, fetch_fundamental_data
 supported_assetTypes = [
   "EQUITY",
   "ETF",
-  #"FOREX",
-  #"FUTURE",
-  #"FUTURE_OPTION",
-  #"INDEX",
-  #"INDICATOR",
+  "FOREX",
+  "FUTURE",
+  "FUTURE_OPTION",
+  "INDEX",
+  "INDICATOR",
   "MUTUAL_FUND",
   "OPTION",
- # "UNKNOWN"
+  "UNKNOWN"
 ]
 
 if __name__ == "__main__":  

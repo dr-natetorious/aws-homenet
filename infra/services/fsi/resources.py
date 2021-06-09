@@ -7,10 +7,16 @@ from aws_cdk import (
   aws_kms as kms,
   aws_iam as iam,
   aws_secretsmanager as sm,
-  aws_finspace as space,
   aws_eks as eks,
   aws_route53 as r53,
+  aws_s3 as s3,
+  aws_route53_targets as dns_targets,
 )
+
+class FinSpaceEnvironment:
+  def __init__(self) -> None:
+    self.environment_name = 'HomeNet-FsiCoreSvc'
+    self.endpoint_url = 'https://7k6oetkcorie4purjw4p7l.us-east-2.amazonfinspace.com'
 
 class FsiSharedResources(core.Construct):
   
@@ -22,10 +28,7 @@ class FsiSharedResources(core.Construct):
     super().__init__(scope, id)
     self.__landing_zone = landing_zone
 
-    # self.dns_zone = r53.PrivateHostedZone.from_hosted_zone_attributes(self, 'DnsZone',
-    #   hosted_zone_id='Z020781536ZD8Y9HV5BO8',
-    #   zone_name='fis.virtual.world')
-
+    # Setup DNS...
     self.trader_dns_zone = r53.PrivateHostedZone(self,'Trader',
       zone_name='trader.fsi'.format(
         landing_zone.zone_name.lower()),
@@ -54,43 +57,57 @@ class FsiSharedResources(core.Construct):
       removal_policy=core.RemovalPolicy.DESTROY,
       secret_name='HomeNet-{}-Ameritrade-Secrets'.format(self.landing_zone.zone_name))
 
-    self.fspace = space.CfnEnvironment(self,'Environment',
-      name='HomeNet-Fsi',
-      description="HomeNets Financial Servicing")
+    self.bucket = s3.Bucket(self,'Bucket',
+      bucket_name='homenet-{}.{}.trader.fsi'.format(
+        self.landing_zone.zone_name,
+        core.Stack.of(self).region).lower(),
+      versioned=True)
+
+    r53.ARecord(self,'BucketAlias',
+      zone=self.trader_dns_zone,
+      record_name=self.bucket.bucket_domain_name,
+      target= r53.RecordTarget.from_alias(dns_targets.BucketWebsiteTarget(self.bucket)))
+
+    # self.fspace = space.CfnEnvironment(self,'Finspace',
+    #   name='HomeNet-FsiCoreSvc',
+    #   kms_key_id= self.key.key_id,
+    #   description="HomeNet Financial Servicing Catalog")
+    self.finspace = FinSpaceEnvironment()
+    self.key.grant_admin(iam.ServicePrincipal(service='finspace'))
       
     # Setup the EKS cluster....
-    master_role = iam.Role(self,'MasterRole',
-      assumed_by=iam.AccountPrincipal(account_id=core.Stack.of(self).account),
-      managed_policies=[
-        iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='AmazonEKSClusterPolicy')
-      ],
-      role_name='fsi-eks-master-role@HomeNet-{}.{}'.format(
-        landing_zone.zone_name,
-        core.Stack.of(self).region).lower())
+    # master_role = iam.Role(self,'MasterRole',
+    #   assumed_by=iam.AccountPrincipal(account_id=core.Stack.of(self).account),
+    #   managed_policies=[
+    #     iam.ManagedPolicy.from_aws_managed_policy_name(
+    #       managed_policy_name='AmazonEKSClusterPolicy')
+    #   ],
+    #   role_name='fsi-eks-master-role@HomeNet-{}.{}'.format(
+    #     landing_zone.zone_name,
+    #     core.Stack.of(self).region).lower())
 
-    cluster_role = iam.Role(self,'ColusterMasterRole',
-      assumed_by=iam.ServicePrincipal(service='eks-fargate-pods'),
-      managed_policies=[
-        iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='AmazonEKSFargatePodExecutionRolePolicy'),
-        iam.ManagedPolicy.from_aws_managed_policy_name(
-          managed_policy_name='AmazonEKSClusterPolicy')
-      ],
-      role_name='fsi-eks-cluster-role@HomeNet-{}.{}'.format(
-        landing_zone.zone_name,
-        core.Stack.of(self).region).lower())
+    # cluster_role = iam.Role(self,'ClusterMasterRole',
+    #   assumed_by=iam.ServicePrincipal(service='eks-fargate-pods'),
+    #   managed_policies=[
+    #     iam.ManagedPolicy.from_aws_managed_policy_name(
+    #       managed_policy_name='AmazonEKSFargatePodExecutionRolePolicy'),
+    #     iam.ManagedPolicy.from_aws_managed_policy_name(
+    #       managed_policy_name='AmazonEKSClusterPolicy')
+    #   ],
+    #   role_name='fsi-eks-cluster-role@HomeNet-{}.{}'.format(
+    #     landing_zone.zone_name,
+    #     core.Stack.of(self).region).lower())
 
-    self.cluster = eks.FargateCluster(self,'Cluster',
-      endpoint_access= eks.EndpointAccess.PUBLIC_AND_PRIVATE,
-      security_group= self.landing_zone.security_group,
-      vpc= self.landing_zone.vpc,
-      masters_role= master_role,
-      secrets_encryption_key= self.key,
-      place_cluster_handler_in_vpc=True,
-      role= cluster_role,    
-      vpc_subnets= [ec2.SubnetSelection(subnet_group_name='Default')],
-      output_cluster_name=True,
-      output_config_command=True,
-      version= eks.KubernetesVersion.V1_19,
-      cluster_name='HomeNet-{}-Fsi'.format(self.landing_zone.zone_name))
+    # self.cluster = eks.FargateCluster(self,'Cluster',
+    #   endpoint_access= eks.EndpointAccess.PUBLIC_AND_PRIVATE,
+    #   security_group= self.landing_zone.security_group,
+    #   vpc= self.landing_zone.vpc,
+    #   masters_role= master_role,
+    #   secrets_encryption_key= self.key,
+    #   place_cluster_handler_in_vpc=True,
+    #   role= cluster_role,    
+    #   vpc_subnets= [ec2.SubnetSelection(subnet_group_name='Default')],
+    #   output_cluster_name=True,
+    #   output_config_command=True,
+    #   version= eks.KubernetesVersion.V1_19,
+    #   cluster_name='HomeNet-{}-Fsi'.format(self.landing_zone.zone_name))

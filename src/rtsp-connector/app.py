@@ -26,9 +26,8 @@ def run_continously(config:Configuration=None):
 
   while(True):
     try:
-      print('Processing: '+str(config))
+      #print('Processing: '+str(config))
       Producer(config).invoke()
-      friendly_sleep(5)
     except Exception as error:
       print(error)
 
