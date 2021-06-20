@@ -8,8 +8,8 @@ from time import sleep
 from ratelimitqueue import RateLimitQueue
 from lib.StateStore import StateStore
 
-logger = Logger('InstrumentCollector')
-class InstrumentCollector(Collector):
+logger = Logger('InstrumentDiscovery')
+class InstrumentDiscovery(Collector):
   def __init__(self, tdclient:TDClient, state_store:StateStore) -> None:
     super().__init__(tdclient,state_store)
 
@@ -40,7 +40,7 @@ class InstrumentCollector(Collector):
         continue
       except GeneralError:
         # Response too big, split into subcalls...
-        print('Response too big; splitting...')
+        print('Response too big - {}; splitting...'.format(prefix))
         suffix = prefix[-1].replace('.*','')
         for ch in list(range(65,91)) + list(range(48,57)):
           prefix = '.*{}{}'.format(chr(ch),suffix)

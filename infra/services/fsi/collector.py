@@ -30,7 +30,7 @@ class FsiCollectorConstruct(core.Construct):
     super().__init__(scope, id)    
     self.__resources = resources
 
-    self.table = ddb.Table(self,'Table',
+    self.state_table = ddb.Table(self,'Table',
       table_name='Fsi{}-Collector'.format(resources.landing_zone.zone_name),
       billing_mode= ddb.BillingMode.PAY_PER_REQUEST,
       point_in_time_recovery=True,
@@ -44,14 +44,14 @@ class FsiCollectorConstruct(core.Construct):
     )
 
     self.query_by_symbol_index_name = 'query-by-symbol'
-    self.table.add_global_secondary_index(
+    self.state_table.add_global_secondary_index(
       partition_key=ddb.Attribute(name='symbol',type=ddb.AttributeType.STRING),
       sort_key=ddb.Attribute(name='SortKey',type=ddb.AttributeType.STRING),
       index_name=self.query_by_symbol_index_name,
       projection_type=ddb.ProjectionType.ALL)
 
     self.query_by_exchange_name = 'query-by-exchange'
-    self.table.add_global_secondary_index(
+    self.state_table.add_global_secondary_index(
       partition_key=ddb.Attribute(name='exchange',type=ddb.AttributeType.STRING),
       sort_key=ddb.Attribute(name='SortKey',type=ddb.AttributeType.STRING),
       index_name=self.query_by_exchange_name,
@@ -71,7 +71,7 @@ class FsiCollectorConstruct(core.Construct):
       ])
 
     resources.tda_secret.grant_read(role)
-    self.table.grant_read_write_data(role)
+    self.state_table.grant_read_write_data(role)
 
     # Configure the lambda...
     self.repo = assets.DockerImageAsset(self,'Repo',
@@ -103,7 +103,7 @@ class FsiCollectorConstruct(core.Construct):
           string_parameter_name='/HomeNet/Amertitrade/redirect_uri').string_value,
         'TDA_CLIENT_ID': ssm.StringParameter.from_string_parameter_name(self, 'TDA_CLIENT_ID',
           string_parameter_name='/HomeNet/Ameritrade/client_id').string_value,
-        'STATE_TABLE_NAME': self.table.table_name,
+        'STATE_TABLE_NAME': self.state_table.table_name,
       }
     )
 
