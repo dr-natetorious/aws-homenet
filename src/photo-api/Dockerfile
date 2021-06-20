@@ -17,14 +17,13 @@ ARG FUNCTION_DIR
 # Create function directory
 RUN mkdir -p ${FUNCTION_DIR}
 
-# Copy function code
-COPY . ${FUNCTION_DIR}
-
 # Install the runtime interface client
-RUN pip install \
-  --target ${FUNCTION_DIR} \
-  awslambdaric
+# RUN pip install \
+#   --target ${FUNCTION_DIR} \
+#   awslambdaric
 
+# Copy function code
+COPY requirements.txt ${FUNCTION_DIR}
 RUN pip install \
   --target ${FUNCTION_DIR} \
   -r ${FUNCTION_DIR}/requirements.txt
@@ -38,11 +37,12 @@ ARG FUNCTION_DIR
 WORKDIR ${FUNCTION_DIR}
 
 RUN yum -y update && yum -y install \ 
-  mesa-libGL.x86_64 \
+  # mesa-libGL.x86_64 \
   opencv-python.x86_64 
   
 # Copy in the build image dependencies
 COPY --from=build-image ${FUNCTION_DIR} ${FUNCTION_DIR}
+COPY . ${FUNCTION_DIR}
 
 #ENTRYPOINT [ "/usr/local/bin/python", "-m", "awslambdaric" ]
 CMD [ "handler.app" ]

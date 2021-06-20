@@ -3,3 +3,4 @@ requests
 flask-lambda
 boto3
 rtsp
+awslambdaric

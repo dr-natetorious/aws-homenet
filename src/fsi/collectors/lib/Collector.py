@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-from ClientFactory import ClientFactory
+from typing import List, Mapping
+import ratelimitqueue
+from td.client import ExdLmtError
+from td.exceptions import GeneralError
+from lib.ClientFactory import ClientFactory
 from os import environ
 from json import dumps
 from logging import getLogger
@@ -17,32 +21,58 @@ max_calls = 60 # maximum is 120
 kinesis = boto3.client('kinesis')
 stream_name = environ.get('STREAM_NAME')
 
-def fetch_all_instruments(assetTypes:list):
+def fetch_all_instruments(assetTypes:list)->Mapping[str,List[str]]:
   """
   Enumerates through all symbols
   """
-  symbols = []
+  symbols = {}
   filter_count=0
-  for prefix in list(range(65,91)) + list(range(48,57)):
-    prefix = '.*'+chr(prefix)
+  queue = RateLimitQueue(calls=30, per=1)
+  for alpha in list(range(65,91)) + list(range(48,57)):
+    prefix = '.*'+chr(alpha)
+    queue.put(prefix)
 
-    instruments = tdclient.search_instruments(
-      symbol=prefix,
-      projection='symbol-regex')
+  while(queue.qsize() > 0):  
+    try:
+      prefix = queue.get()
+      instruments = tdclient.search_instruments(
+        symbol=prefix,
+        projection='symbol-regex')
+    except ExdLmtError as error:
+      print('Error (sleep 10sec): '+str(error))
+      queue.put(prefix)
+      sleep(10)
+      continue
+    except GeneralError:
+      # Response too big, split into subcalls...
+      print('Response too big; splitting...')
+      suffix = prefix[-1].replace('.*','')
+      for ch in list(range(65,91)) + list(range(48,57)):
+        prefix = '.*{}{}'.format(chr(ch),suffix)
+        queue.put(prefix)
+      continue
+    except Exception as error:
+      print('Error:'+str(error))
+      continue
 
     print('Query Prefix {} found {} instruments...'.format(
       prefix, len(instruments)))
 
     for symbol in instruments.keys():
       assetType = instruments[symbol]['assetType']
-      if assetType in assetTypes:
-        symbols.append(symbol)
-      else:
+      if not assetType in assetTypes:
         filter_count+=1
+        continue
+      
+      if not assetType in symbols:
+        symbols[assetType] = [symbol]
+      else:
+        symbols[assetType].append(symbol)      
 
   print('Returning {} instruments with {} filtered...'.format(
     len(symbols), filter_count)
   )
+  
   return symbols
     
 def fetch_fundamental_data(symbols:list):

@@ -59,20 +59,41 @@ def faces_page():
 
 @app.route('/-/face/preview/<faceid>')
 def get_face_preview(faceid:str):
-  images:List[Mapping[str,Any]] = face_table_client.get_face_images(faceid)['Images']
-  best_image = images[-1]
+  print('get_face_preview(faceid:{})'.format(faceid))
 
-  content = image_client.fetch_image(best_image['s3_uri'])
-  bbox = BoundingBox(best_image['bounding_box'])
-  if bbox.is_usable:
-    content = image_client.cut_bounding_box(content, bbox)
-    content = image_client.resize_image(content,(64,64))
-  else:
-    content = image_client.resize_image(content,(64,64))
+  try:
+    images:List[Mapping[str,Any]] = face_table_client.get_face_images(faceid)['Images']
+    best_image = images[-1]
+  except Exception as error:
+    print('Unable to best_image metadata')
+    raise error
 
-  response = make_response(content.read())
-  response.headers.set('Content-Type', 'image/png')
-  return response
+  try:
+    content = image_client.fetch_image(best_image['s3_uri'])
+    bbox = BoundingBox(best_image['bounding_box'])
+    if bbox.is_usable:
+      content = image_client.cut_bounding_box(content, bbox)
+      content = image_client.resize_image(content,(64,64))
+    else:
+      content = image_client.resize_image(content,(64,64))
+  except Exception as error:
+    print('Unable to fetch/crop best_image[{}]'.format(
+      best_image['s3_uri']))
+    raise error
+
+  try:
+    return Response(
+      response=content.read(),
+      mimetype='image/png',
+      content_type='image/png')
+  except Exception as error:
+    print('Unable to return best_image[{}]'.format(
+      best_image['s3_uri']))
+    raise error
+
+  # response = make_response(content.read())
+  # response.headers.set('Content-Type', 'image/png')
+  # return response
 
   # with open('templates/pict.png','rb')  as f:
   #   image = f.read()

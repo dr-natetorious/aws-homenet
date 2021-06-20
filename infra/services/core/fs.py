@@ -7,7 +7,7 @@ from aws_cdk import (
     aws_fsx as fsx,
     aws_efs as efs,
     aws_route53 as r53,
-    aws_route53_targets as r53t,
+    aws_ssm as ssm,
 )
 
 class NetworkFileSystemsConstruct(core.Construct):
@@ -65,6 +65,7 @@ class NetworkFileSystemsConstruct(core.Construct):
     #   create_acl= efs.Acl(owner_uid='0',owner_gid='0',permissions='0777'))
 
   def configure_dns(self, zone:r53.IHostedZone)->None:
+    # Add FSX Records
     r53.ARecord(self,'DnsRecord',
       zone=zone,
       comment='Name Record for '+NetworkFileSystemsConstruct.__name__,
@@ -73,13 +74,14 @@ class NetworkFileSystemsConstruct(core.Construct):
       target=r53.RecordTarget(
         values= ['10.10.35.85'] ))
 
-    r53.ARecord(self,'DnsRecord',
-      zone=zone,
-      comment='Name Record for '+NetworkFileSystemsConstruct.__name__,
-      record_name='amznfsxkw4byw3j.{}'.format(zone.zone_name),
-      ttl=core.Duration.seconds(60),
-      target=r53.RecordTarget(
-        values= ['10.10.35.85'] ))
+    # This is only required for parity with devbox 
+    # r53.ARecord(self,'TempDnsRecord',
+    #   zone=zone,
+    #   comment='Name Record for '+NetworkFileSystemsConstruct.__name__,
+    #   record_name='amznfsxkw4byw3j.{}'.format(zone.zone_name),
+    #   ttl=core.Duration.seconds(60),
+    #   target=r53.RecordTarget(
+    #     values= ['10.10.35.85'] ))
     
     # Add efs sources...
     for entry in [

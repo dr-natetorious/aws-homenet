@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
+from lib.ClientFactory import ClientFactory
 import boto3
-#from Collector import fetch_all_instruments, fetch_quotes_data
+from lib.Collector import fetch_all_instruments, fetch_quotes_data
 
 supported_assetTypes = [
   "EQUITY",
@@ -16,6 +17,11 @@ supported_assetTypes = [
 ]
 
 if __name__ == "__main__":
+  factory = ClientFactory()
+  client = factory.create_client()
+  
+  instruments = fetch_all_instruments(assetTypes=supported_assetTypes)
+  fetch_quotes_data(instruments)
   # try:
   #   request = client.create_changeset(
   #     datasetId='esp38x1',
