@@ -2,7 +2,8 @@ from os import environ, path, stat
 from json import dumps
 import boto3
 from td.client import TDClient
-
+from sys import platform, prefix
+from tempfile import TemporaryDirectory
 class ClientFactory:
 
   @property
@@ -20,7 +21,10 @@ class ClientFactory:
   @staticmethod
   def create_client(force_refresh:bool=True) -> TDClient:
     factory = ClientFactory()
-    creds_file = factory.__fetch_credential_file(force_refresh=True)
+    
+    outfile = TemporaryDirectory(prefix='FsiCollector')
+    outpath = path.join(outfile.name,'creds.json')
+    creds_file = factory.__fetch_credential_file(force_refresh=force_refresh, outpath=outpath)
     client = TDClient(
       client_id=factory.td_client_id,
       redirect_uri=factory.td_redirect_uri,

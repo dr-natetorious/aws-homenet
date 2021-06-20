@@ -66,7 +66,7 @@ class InstrumentCollector(Collector):
         else:
           symbols[assetType].append(symbol)      
 
-    print('Returning {} instruments with {} filtered...'.format(
-      [{'x':len(symbols[x])} for x in symbols.keys()], filter_count))
+    print('SUMMARY: {} instruments with {} filtered...'.format(
+      [{str(x):len(symbols[x])} for x in symbols.keys()], filter_count))
     
     return symbols

@@ -17,7 +17,7 @@ def process_notification(event:Mapping[str,Any], _):
   state_store = StateStore(table_name='FsiCoreSvc-Collector',region_name='us-east-2')
   
   if action == 'DiscoverInstruments':
-    InstrumentCollector(tdclient,state_store).run(action['AssetTypes'])
+    InstrumentCollector(tdclient,state_store).run(event['AssetTypes'])
   elif action == 'DiscoverOptionable':
     print('Add DiscoverOptionable code')
   elif action == 'CollectFundamentals':
