@@ -6,6 +6,7 @@ from infra.services.fsi.collections.state_machine import FsiLongRunningCollectio
 from aws_cdk import (
   core,
   aws_dynamodb as ddb,
+  aws_timestream as ts,
 )
 
 source_directory = 'src/fsi/collectors'
@@ -63,3 +64,15 @@ class FsiCollectionDataStoreConstruct(core.Construct):
         type=ddb.AttributeType.STRING),
       time_to_live_attribute='Expiration',
     )
+
+    self.timeseries_database = ts.CfnDatabase(self,'Database',
+      database_name='HomeNet-Fsi{}'.format(resources.landing_zone.zone_name))
+
+    self.quotes = ts.CfnTable(self,'QuotesTable',
+      database_name= self.timeseries_database.database_name,
+      table_name='Quotes',
+      retention_properties = {
+        "MemoryStoreRetentionPeriodInHours": str(365 * 24),
+        "MagneticStoreRetentionPeriodInDays": str(365 * 200)
+      })
+    self.quotes.add_depends_on(self.timeseries_database)

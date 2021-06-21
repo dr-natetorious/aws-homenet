@@ -1,4 +1,5 @@
 from json import dumps
+from lib.interfaces import RunStatus
 from lib.transactions import TransactionAudit
 from lib.optionable import OptionableDiscovery
 from os import environ
@@ -23,6 +24,13 @@ state_store = StateStore(
 # Determine how much time we have...
 def get_time_available_seconds(context):
   return floor(context.get_remaining_time_in_millis() / 1000)
+
+is_success = {
+  'Result': {
+    'RunState': str(RunStatus.COMPLETE)
+  }
+}
+
 
 # Amazon Lambda Function Entrypoint ...
 def process_notification(event:Mapping[str,Any], context):
@@ -62,6 +70,7 @@ def process_notification(event:Mapping[str,Any], context):
       lookback_days= int(event['lookback_days'])
     
     TransactionAudit(tdclient,state_store).run(lookback_days)
+    return is_success
   else:
     raise NotImplementedError('Add code for Action='+action)
 
