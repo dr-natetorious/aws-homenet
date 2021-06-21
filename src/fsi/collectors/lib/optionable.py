@@ -9,7 +9,7 @@ from time import sleep
 from ratelimitqueue import RateLimitQueue
 from lib.StateStore import StateStore
 from datetime import datetime
-from aws_xray_sdk.core import xray_recorder
+#from aws_xray_sdk.core import xray_recorder
 
 logger = Logger('OptionableDiscovery')
 batch_size = 25
@@ -17,7 +17,7 @@ class OptionableDiscovery(Collector):
   def __init__(self, tdclient:TDClient, state_store:StateStore) -> None:
     super().__init__(tdclient,state_store)
 
-  @xray_recorder.capture('OptionableDiscovery::run')
+  #@xray_recorder.capture('OptionableDiscovery::run')
   def run(self, max_items:int=99999)->RunStatus:
     """
     Discovers which symbols are optionable.

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any, List, Mapping
 import boto3
 from logging import Logger
@@ -5,7 +6,7 @@ from time import time
 from datetime import datetime, timedelta
 from boto3.dynamodb.conditions import Key
 from math import ceil
-from aws_xray_sdk.core import xray_recorder
+#from aws_xray_sdk.core import xray_recorder
 
 logger = Logger('StateStore')
 epoch = datetime(1970,1,1)
@@ -13,21 +14,79 @@ class StateStore:
   """
   Represents a storage interface for the FsiCollections Service.
   """
-  def __init__(self, table_name:str, region_name:str) -> None:
-    assert table_name != None, "No table specified"
+  def __init__(self, instrument_table_name:str, transaction_table_name:str, region_name:str) -> None:
+    assert instrument_table_name != None, "No table specified"
     self.dynamodb = boto3.resource('dynamodb', region_name=region_name)
-    self.table_name = table_name
-    self.table = self.dynamodb.Table(self.table_name)
+    
+    # Configure instrument_table
+    self.instrument_table_name = instrument_table_name
+    self.instrument_table = self.dynamodb.Table(self.instrument_table_name)
+
+    # Configure transaction_table
+    self.transaction_table_name = transaction_table_name
+    self.transaction_table = self.dynamodb.Table(self.transaction_table_name)
 
   def retrieve_equity(self)->List[Mapping[str,str]]:
-    query = self.table.query(
+    query = self.instrument_table.query(
       KeyConditionExpression=Key('PartitionKey').eq('Fsi::Instruments::EQUITY'))
 
     return query['Items']
 
-  @xray_recorder.capture('StateStore::set_optionable')
+  #@xray_recorder.capture('StateStore::set_account')
+  def set_account(self, account:dict, balances:Mapping[str,dict])->None:
+    with self.transaction_table.batch_writer() as batch:
+      try:
+        for balance_name in set(balances.keys()):
+          balance = balances[balance_name]
+          if balance == None:
+            continue
+          
+          # Record the account...
+          StateStore.normalize(balance)
+          balance['PartitionKey']= 'Fsi::Account'
+          balance['SortKey']= 'Fsi::Account::{}::{}::{}'.format(
+            account['type'],
+            account['accountId'],
+            balance_name).upper()
+          balance['Expiration']= ceil(StateStore.expiration())
+          balance['last_update']= ceil(time())
+          
+          # Account Level properties
+          balance['accountType'] = account['type']
+          balance['accountId'] = account['accountId']
+          balance['isClosingOnlyRestricted']= account['isClosingOnlyRestricted']
+          balance['isDayTrader'] = account['isDayTrader']
+
+          batch.put_item(Item=balance)
+      except Exception as error:
+        print(str(error))
+        raise error
+
+  #@xray_recorder.capture('StateStore::add_transactions')
+  def add_transactions(self, account:dict, transactions:List[Mapping[str,Any]])->None:
+    with self.transaction_table.batch_writer() as batch:
+      try:
+        for transaction in transactions:
+          if transaction == None:
+            continue
+
+          # Record the transaction...
+          StateStore.normalize(transaction)
+          transaction['PartitionKey']= 'Fsi::Transactions'
+          transaction['SortKey']= 'Fsi::Transaction::{}::{}::{}'.format(
+            account['type'],
+            account['accountId'],
+            transaction['transactionId']).upper()
+          transaction['Expiration']= ceil(StateStore.expiration(days=365 * 5))
+          transaction['last_update']= ceil(time())
+          batch.put_item(Item=transaction)
+      except Exception as error:
+        print(str(error))
+        raise error
+  
+  #@xray_recorder.capture('StateStore::set_optionable')
   def set_optionable(self, instruments:List[dict])->None:
-    with self.table.batch_writer() as batch:
+    with self.instrument_table.batch_writer() as batch:
       try:
         for instrument in instruments:
           if instrument == None:
@@ -44,9 +103,9 @@ class StateStore:
   def clear_progress(self, component_name:str)->None:
     return self.set_progress(component_name, marker='')
 
-  @xray_recorder.capture('StateStore::set_progress')
+  #@xray_recorder.capture('StateStore::set_progress')
   def set_progress(self, component_name:str, marker:Any)->None:
-    with self.table.batch_writer() as batch:
+    with self.instrument_table.batch_writer() as batch:
       try:
         progress = {}
         progress['PartitionKey']= 'Fsi::ProgressMarker'
@@ -59,16 +118,16 @@ class StateStore:
         print(str(error))
 
   def get_progress(self, component_name:str)->Any:
-    query = self.table.query(
+    query = self.instrument_table.query(
       KeyConditionExpression=Key('PartitionKey').eq('Fsi::ProgressMarker') & Key('SortKey').eq(component_name))
 
     marker = query['Items']
     return marker
 
-  @xray_recorder.capture('StateStore::declare_instruments')
+  #@xray_recorder.capture('StateStore::declare_instruments')
   def declare_instruments(self,instruments:List[dict])->None:
     try:
-      with self.table.batch_writer() as batch:
+      with self.instrument_table.batch_writer() as batch:
         for instrument in instruments:
           item = self.declare_instrument(instrument)
           if not item == None:
@@ -122,3 +181,12 @@ class StateStore:
       return default
 
     return dict[key]
+
+  @staticmethod
+  def normalize(d:dict)->dict:
+    for key, value in d.items():
+      if type(value) is float:
+        d[key] = round(Decimal(value),4)
+      elif type(value) is dict:
+        d[key] = StateStore.normalize(value)
+    return d

@@ -2,7 +2,7 @@ from os import environ, path
 import boto3
 from td.client import TDClient
 from sys import platform
-from aws_xray_sdk.core import xray_recorder
+#from aws_xray_sdk.core import xray_recorder
 
 class ClientFactory:
   """
@@ -21,7 +21,7 @@ class ClientFactory:
     return self.__get_value('TDA_SECRET_ID')
 
   @staticmethod
-  @xray_recorder.capture('ClientFactory::create_client')
+  #@xray_recorder.capture('ClientFactory::create_client')
   def create_client(force_refresh:bool=True) -> TDClient:
     factory = ClientFactory()
     

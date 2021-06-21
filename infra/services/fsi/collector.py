@@ -3,9 +3,9 @@ from typing import Any, Mapping
 from aws_cdk.aws_logs import RetentionDays
 from infra.services.fsi.resources import FsiSharedResources
 from infra.services.fsi.collections.state_machine import FsiLongRunningCollectionProcess
+from infra.services.fsi.collections.data_store import FsiCollectionDataStoreConstruct
 from aws_cdk import (
   core,
-  aws_dynamodb as ddb,
   aws_ecr_assets as assets,
   aws_lambda as lambda_,
   aws_events as events,
@@ -30,32 +30,9 @@ class FsiCollectorConstruct(core.Construct):
     super().__init__(scope, id)    
     self.__resources = resources
 
-    self.state_table = ddb.Table(self,'Table',
-      table_name='Fsi{}-Collector'.format(resources.landing_zone.zone_name),
-      billing_mode= ddb.BillingMode.PAY_PER_REQUEST,
-      point_in_time_recovery=True,
-      partition_key=ddb.Attribute(
-        name='PartitionKey',
-        type=ddb.AttributeType.STRING),
-      sort_key=ddb.Attribute(
-        name='SortKey',
-        type=ddb.AttributeType.STRING),
-      time_to_live_attribute='Expiration',
-    )
-
-    self.query_by_symbol_index_name = 'query-by-symbol'
-    self.state_table.add_global_secondary_index(
-      partition_key=ddb.Attribute(name='symbol',type=ddb.AttributeType.STRING),
-      sort_key=ddb.Attribute(name='SortKey',type=ddb.AttributeType.STRING),
-      index_name=self.query_by_symbol_index_name,
-      projection_type=ddb.ProjectionType.ALL)
-
-    self.query_by_exchange_name = 'query-by-exchange'
-    self.state_table.add_global_secondary_index(
-      partition_key=ddb.Attribute(name='exchange',type=ddb.AttributeType.STRING),
-      sort_key=ddb.Attribute(name='SortKey',type=ddb.AttributeType.STRING),
-      index_name=self.query_by_exchange_name,
-      projection_type=ddb.ProjectionType.ALL)
+    self.datastores = FsiCollectionDataStoreConstruct(self,'DataStores',
+      resources=self.resources,
+      subnet_group_name=subnet_group_name)
 
     # Configure role...
     role = iam.Role(self,'Role',
@@ -71,7 +48,8 @@ class FsiCollectorConstruct(core.Construct):
       ])
 
     resources.tda_secret.grant_read(role)
-    self.state_table.grant_read_write_data(role)
+    self.datastores.instrument_table.grant_read_write_data(role)
+    self.datastores.transaction_table.grant_read_write_data(role)
 
     # Configure the lambda...
     self.repo = assets.DockerImageAsset(self,'Repo',
@@ -103,30 +81,19 @@ class FsiCollectorConstruct(core.Construct):
           string_parameter_name='/HomeNet/Amertitrade/redirect_uri').string_value,
         'TDA_CLIENT_ID': ssm.StringParameter.from_string_parameter_name(self, 'TDA_CLIENT_ID',
           string_parameter_name='/HomeNet/Ameritrade/client_id').string_value,
-        'STATE_TABLE_NAME': self.state_table.table_name,
+        'INSTRUMENT_TABLE_NAME': self.datastores.instrument_table.table_name,
+        'TRANSACTION_TABLE_NAME': self.datastores.transaction_table.table_name,
       }
     )
 
+    # Define the long running process workflow...
     self.long_running_process = FsiLongRunningCollectionProcess(self,'FsiLongRunningCollectionProcess',
       resources=self.resources,
       function= self.function)
 
+    # Define the execution schedule...
     self.add_lambda_schedule('DiscoverInstruments',
-      schedule=events.Schedule.cron(week_day='SUN',hour="0", minute="0"),
-      payload={
-        'AssetTypes' : [
-          "EQUITY",
-          "ETF",
-          "FOREX",
-          "FUTURE",
-          "FUTURE_OPTION",
-          "INDEX",
-          "INDICATOR",
-          # "MUTUAL_FUND",
-          "OPTION",
-          # "UNKNOWN"
-        ]
-      })
+      schedule=events.Schedule.cron(week_day='SUN',hour="0", minute="0"))
 
     self.add_states_schedule('DiscoverOptionable',
       schedule=events.Schedule.cron(week_day='SUN',hour="1", minute="0"))
