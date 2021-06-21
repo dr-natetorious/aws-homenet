@@ -1,11 +1,13 @@
-from os import environ, path, stat
-from json import dumps
+from os import environ, path
 import boto3
 from td.client import TDClient
-from sys import platform, prefix
-from tempfile import TemporaryDirectory
-class ClientFactory:
+from sys import platform
+from aws_xray_sdk.core import xray_recorder
 
+class ClientFactory:
+  """
+  Represents a factory for TDClient objects.
+  """
   @property
   def td_client_id(self) -> str:
     return self.__get_value('TDA_CLIENT_ID')
@@ -19,11 +21,16 @@ class ClientFactory:
     return self.__get_value('TDA_SECRET_ID')
 
   @staticmethod
+  @xray_recorder.capture('ClientFactory::create_client')
   def create_client(force_refresh:bool=True) -> TDClient:
     factory = ClientFactory()
     
-    outfile = TemporaryDirectory(prefix='FsiCollector')
-    outpath = path.join(outfile.name,'creds.json')
+    base_path = '/tmp/'
+    if platform == 'win32':
+      base_path = path.join(path.dirname(__file__),'..')
+
+    #outfile = TemporaryDirectory(dir='FsiCollector')
+    outpath = path.join(base_path,'creds.json')
     creds_file = factory.__fetch_credential_file(force_refresh=force_refresh, outpath=outpath)
     client = TDClient(
       client_id=factory.td_client_id,

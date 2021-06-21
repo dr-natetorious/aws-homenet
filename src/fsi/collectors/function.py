@@ -1,6 +1,7 @@
 from json import dumps
 from lib.optionable import OptionableDiscovery
 from os import environ
+from math import floor
 from lib.instruments import InstrumentDiscovery
 from lib.StateStore import StateStore
 from lib.ClientFactory import ClientFactory
@@ -10,7 +11,10 @@ state_table_name = environ.get('STATE_TABLE_NAME')
 if state_table_name == None:
   raise ValueError('No STATE_TABLE_NAME specified')
 
-def process_notification(event:Mapping[str,Any], _):
+def get_time_available_seconds(context):
+  return floor(context.get_remaining_time_in_millis() / 1000)
+
+def process_notification(event:Mapping[str,Any], context):
   print(dumps(event))
 
   # Check this is a valid message...
@@ -25,7 +29,14 @@ def process_notification(event:Mapping[str,Any], _):
   if action == 'DiscoverInstruments':
     InstrumentDiscovery(tdclient,state_store).run(event['AssetTypes'])
   elif action == 'DiscoverOptionable':
-    OptionableDiscovery(tdclient, state_store).run()
+    # 100 calls per minute that utilizes at most 75% time available
+    max_tda_calls = floor(get_time_available_seconds(context) / 60.0 * 100.0 * 0.75)
+    result = OptionableDiscovery(tdclient, state_store).run(max_items=max_tda_calls)
+    return {
+      'Result': {
+        'RunState': str(result)
+      }
+    }
   elif action == 'CollectFundamentals':
     print('Add CollectFundamentals code')
   elif action == 'CollectFinalQuotes':

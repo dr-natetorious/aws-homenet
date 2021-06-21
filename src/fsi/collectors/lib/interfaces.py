@@ -1,3 +1,4 @@
+from enum import Enum
 import logging
 from typing import List, Mapping
 from td.client import ExdLmtError, TDClient
@@ -13,6 +14,10 @@ from os import environ
 from base64 import b64encode
 from uuid import uuid1
 from lib.StateStore import StateStore
+
+class RunStatus(Enum):
+  MORE_AVAILABLE='MORE_AVAILABLE'
+  COMPLETE='COMPLETE'
 
 class Collector:
   def __init__(self, tdclient:TDClient, state_store:StateStore) -> None:
@@ -30,5 +35,5 @@ class Collector:
   def state_store(self)->TDClient:
     return self.__state_store
 
-  def run(self)->None:
+  def run(self)->RunStatus:
     raise NotImplementedError()

@@ -5,10 +5,14 @@ from time import time
 from datetime import datetime, timedelta
 from boto3.dynamodb.conditions import Key
 from math import ceil
+from aws_xray_sdk.core import xray_recorder
 
 logger = Logger('StateStore')
 epoch = datetime(1970,1,1)
 class StateStore:
+  """
+  Represents a storage interface for the FsiCollections Service.
+  """
   def __init__(self, table_name:str, region_name:str) -> None:
     assert table_name != None, "No table specified"
     self.dynamodb = boto3.resource('dynamodb', region_name=region_name)
@@ -21,6 +25,7 @@ class StateStore:
 
     return query['Items']
 
+  @xray_recorder.capture('StateStore::set_optionable')
   def set_optionable(self, instruments:List[dict])->None:
     with self.table.batch_writer() as batch:
       try:
@@ -35,10 +40,11 @@ class StateStore:
           batch.put_item(Item=instrument)
       except Exception as error:
         print(str(error))
-
+ 
   def clear_progress(self, component_name:str)->None:
     return self.set_progress(component_name, marker='')
 
+  @xray_recorder.capture('StateStore::set_progress')
   def set_progress(self, component_name:str, marker:Any)->None:
     with self.table.batch_writer() as batch:
       try:
@@ -59,6 +65,7 @@ class StateStore:
     marker = query['Items']
     return marker
 
+  @xray_recorder.capture('StateStore::declare_instruments')
   def declare_instruments(self,instruments:List[dict])->None:
     try:
       with self.table.batch_writer() as batch:

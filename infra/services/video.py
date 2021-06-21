@@ -10,7 +10,6 @@ from aws_cdk import (
   aws_route53 as r53,
 )
 
-cameras=['live'+str(x) for x in range(0,3)]
 class VideoSubnet(core.Construct):
   def __init__(self, scope: core.Construct, id: str, landing_zone:IVpcLandingZone, subnet_group_name:str='Default', **kwargs) -> None:
     super().__init__(scope, id, **kwargs)

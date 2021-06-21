@@ -19,4 +19,5 @@ aws_cdk.aws_codeartifact
 aws_cdk.aws_codepipeline_actions
 aws_cdk.aws_s3_deployment
 aws_cdk.aws_finspace
+aws_cdk.aws_stepfunctions_tasks
 cryptography

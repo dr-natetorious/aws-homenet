@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from math import ceil, trunc
-from td.option_chain import OptionChain
-from lib.interfaces import Collector
+from lib.interfaces import Collector, RunStatus
 from typing import List, Mapping
 from td.client import ExdLmtError, TDClient
 from td.exceptions import GeneralError
@@ -10,18 +9,21 @@ from time import sleep
 from ratelimitqueue import RateLimitQueue
 from lib.StateStore import StateStore
 from datetime import datetime
+from aws_xray_sdk.core import xray_recorder
 
 logger = Logger('OptionableDiscovery')
-batch_size = 10
+batch_size = 25
 class OptionableDiscovery(Collector):
   def __init__(self, tdclient:TDClient, state_store:StateStore) -> None:
     super().__init__(tdclient,state_store)
 
-  def run(self)->Mapping[str,List[str]]:
+  @xray_recorder.capture('OptionableDiscovery::run')
+  def run(self, max_items:int=99999)->RunStatus:
     """
     Discovers which symbols are optionable.
     """
     # Check if the progress marker exists...
+    
     progress = self.state_store.get_progress(OptionableDiscovery.__name__)[-1]
     if progress != None and "marker" in progress:
       marker = progress['marker']
@@ -62,6 +64,10 @@ class OptionableDiscovery(Collector):
             total, 
             round(completed/total*100,2),
             skipped))
+
+        # Check if we reached the run limit
+        if completed >= max_items:
+          return RunStatus.MORE_AVAILABLE
       except ExdLmtError as error:
         print('Error (sleep 5): '+str(error))
         sleep(5)
@@ -72,6 +78,7 @@ class OptionableDiscovery(Collector):
     if len(responses) > 0:
       self.state_store.set_optionable(responses)
     self.state_store.clear_progress(OptionableDiscovery.__name__)
+    return RunStatus.COMPLETE
   
   def check_instrument(self, instrument:dict)->bool:
     # Examine the instrument's symbol...
@@ -80,10 +87,16 @@ class OptionableDiscovery(Collector):
       return None
 
     # Query the Option Chain...
-    chain = self.tdclient.get_options_chain(
-      option_chain={
-        'symbol':symbol,
-        'strikeCount':1})
+    for attempt in range(1,3):
+      try:
+        chain = self.tdclient.get_options_chain(
+          option_chain={
+            'symbol':symbol,
+            'strikeCount':1})
+        break
+      except Exception as error:
+        logger.error(str(error))
+        sleep(attempt * attempt)
 
     if chain == None:
       return None

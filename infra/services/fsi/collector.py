@@ -2,6 +2,7 @@ import builtins
 from typing import Any, Mapping
 from aws_cdk.aws_logs import RetentionDays
 from infra.services.fsi.resources import FsiSharedResources
+from infra.services.fsi.collections.state_machine import FsiLongRunningCollectionProcess
 from aws_cdk import (
   core,
   aws_dynamodb as ddb,
@@ -14,7 +15,6 @@ from aws_cdk import (
   aws_ssm as ssm,
   aws_sqs as sqs,
 )
-
 
 source_directory = 'src/fsi/collectors'
 class FsiCollectorConstruct(core.Construct):
@@ -92,7 +92,7 @@ class FsiCollectorConstruct(core.Construct):
       tracing= lambda_.Tracing.ACTIVE,
       vpc= resources.landing_zone.vpc,
       log_retention= RetentionDays.TWO_WEEKS,
-      memory_size=512,
+      memory_size= 4 * 128,
       allow_all_outbound=True,
       vpc_subnets=ec2.SubnetSelection(subnet_group_name=subnet_group_name),
       security_groups=[resources.landing_zone.security_group],
@@ -107,7 +107,11 @@ class FsiCollectorConstruct(core.Construct):
       }
     )
 
-    self.add_schedule('DiscoverInstruments',
+    self.long_running_process = FsiLongRunningCollectionProcess(self,'FsiLongRunningCollectionProcess',
+      resources=self.resources,
+      function= self.function)
+
+    self.add_lambda_schedule('DiscoverInstruments',
       schedule=events.Schedule.cron(week_day='SUN',hour="0", minute="0"),
       payload={
         'AssetTypes' : [
@@ -124,19 +128,19 @@ class FsiCollectorConstruct(core.Construct):
         ]
       })
 
-    self.add_schedule('DiscoverOptionable',
+    self.add_states_schedule('DiscoverOptionable',
       schedule=events.Schedule.cron(week_day='SUN',hour="1", minute="0"))
 
-    self.add_schedule('CollectFundamentals',
+    self.add_lambda_schedule('CollectFundamentals',
       schedule=events.Schedule.cron(week_day='SUN',hour="2", minute="0"))
 
-    self.add_schedule('CollectFinalQuotes',
+    self.add_lambda_schedule('CollectFinalQuotes',
       schedule=events.Schedule.cron(week_day='MON-FRI',hour="23", minute="0"))
     
-    self.add_schedule('CollectTransactions',
+    self.add_lambda_schedule('CollectTransactions',
       schedule=events.Schedule.cron(week_day='SUN-FRI', minute="30"))
 
-  def add_schedule(self, action:str, schedule:events.Schedule, payload:Mapping[str,Any]=None)->None:
+  def add_lambda_schedule(self, action:str, schedule:events.Schedule, payload:Mapping[str,Any]=None)->None:
     """
     Creates a collection schedule
     """
@@ -159,4 +163,31 @@ class FsiCollectorConstruct(core.Construct):
               action),
             removal_policy= core.RemovalPolicy.DESTROY),
           event=events.RuleTargetInput.from_object(payload))
+      ])
+
+  def add_states_schedule(self, action:str, schedule:events.Schedule, payload:Mapping[str,Any]=None)->None:
+    """
+    Creates a collection schedule
+    """
+    if payload == None:
+      payload={}
+    payload['Action']=action
+
+    # Create schedules...
+    events.Rule(self,action+'Rule',
+      rule_name='Fsi{}-Collector_{}'.format(self.resources.landing_zone.zone_name, action),
+      description='Fsi Collector '+action,
+      schedule= schedule,
+      #schedule= events.Schedule.rate(core.Duration.minutes(1)),
+      targets=[
+        targets.SfnStateMachine(
+          machine=self.long_running_process.state_machine,
+          dead_letter_queue=sqs.Queue(self,'{}_dlq'.format(action),
+            queue_name='Fsi{}-Collector_{}_dlq'.format(
+              self.resources.landing_zone.zone_name,
+              action),
+            removal_policy= core.RemovalPolicy.DESTROY),
+          input= events.RuleTargetInput.from_object({
+            'Payload': payload
+          }))
       ])
