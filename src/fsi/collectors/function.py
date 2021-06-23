@@ -63,7 +63,8 @@ def process_notification(event:Mapping[str,Any], context):
       }
     }
   elif action == 'CollectQuotes':
-    result = QuoteCollection(tdclient, state_store).run(max_items=max_tda_calls)
+    candle_config = StateStore.default_value(event,'CandleConfiguration', None)
+    result = QuoteCollection(tdclient, state_store, candle_config).run(max_items=max_tda_calls)
     return {
       'Result': {
         'RunState': str(result)

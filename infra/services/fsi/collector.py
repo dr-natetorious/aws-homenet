@@ -102,7 +102,7 @@ class FsiCollectorConstruct(core.Construct):
     self.add_lambda_schedule('CollectFundamentals',
       schedule=events.Schedule.cron(week_day='SUN',hour="2", minute="0"))
 
-    self.add_lambda_schedule('CollectQuotes',
+    self.add_states_schedule('CollectQuotes',
       schedule=events.Schedule.cron(week_day='MON-FRI',hour="13-23/3", minute="0"),
       payload={
         'CandleConfiguration':{
