@@ -26,9 +26,15 @@ class StateStore:
     self.transaction_table_name = transaction_table_name
     self.transaction_table = self.dynamodb.Table(self.transaction_table_name)
 
-  def retrieve_equity(self)->List[Mapping[str,str]]:
+  def retrieve_equities(self)->List[Mapping[str,str]]:
     query = self.instrument_table.query(
       KeyConditionExpression=Key('PartitionKey').eq('Fsi::Instruments::EQUITY'))
+
+    return query['Items']
+
+  def retrieve_optionable(self)->List[Mapping[str,str]]:
+    query = self.instrument_table.query(
+      KeyConditionExpression=Key('PartitionKey').eq('Fsi::Optionable'))
 
     return query['Items']
 
@@ -99,12 +105,31 @@ class StateStore:
           batch.put_item(Item=instrument)
       except Exception as error:
         print(str(error))
+        raise error
  
+  def set_fundamentals(self, fundamentals:List[dict])->None:
+    with self.instrument_table.batch_writer() as batch:
+      try:
+        for instrument in fundamentals:
+          if instrument == None:
+            continue
+
+          instrument['PartitionKey']= 'Fsi::Fundamental'
+          instrument['SortKey']= 'Fsi::Fundamental::'+str(instrument['symbol']).upper()
+          instrument['Expiration']= ceil(StateStore.expiration())
+          instrument['last_update']= ceil(time())
+          batch.put_item(Item=instrument)
+      except Exception as error:
+        print(str(error))
+        raise error
+
   def clear_progress(self, component_name:str)->None:
+    print('Removing marker [{}]'.format(component_name))
     return self.set_progress(component_name, marker='')
 
   #@xray_recorder.capture('StateStore::set_progress')
   def set_progress(self, component_name:str, marker:Any)->None:
+    print('Setting ProgressMarker[{}] => [{}]'.format(component_name, marker))
     with self.instrument_table.batch_writer() as batch:
       try:
         progress = {}
@@ -116,13 +141,20 @@ class StateStore:
         batch.put_item(Item=progress)
       except Exception as error:
         print(str(error))
+        raise error
 
   def get_progress(self, component_name:str)->Any:
+    # Fetch the component marker
     query = self.instrument_table.query(
       KeyConditionExpression=Key('PartitionKey').eq('Fsi::ProgressMarker') & Key('SortKey').eq(component_name))
+    items = query['Items']
+    print('Retrieved ProgressMarker[{}] with value [{}]'.format(component_name, items))
 
-    marker = query['Items']
-    return marker
+    if len(items) > 1:
+      raise ValueError('Multiple markers detected')
+
+    # Return the last item
+    return items[-1]
 
   #@xray_recorder.capture('StateStore::declare_instruments')
   def declare_instruments(self,instruments:List[dict])->None:

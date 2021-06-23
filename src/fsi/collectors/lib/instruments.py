@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from lib.interfaces import Collector
+from lib.interfaces import Collector, RunStatus
 from typing import List, Mapping
 from td.client import ExdLmtError, TDClient
 from td.exceptions import GeneralError
@@ -13,16 +13,13 @@ class InstrumentDiscovery(Collector):
   def __init__(self, tdclient:TDClient, state_store:StateStore) -> None:
     super().__init__(tdclient,state_store)
 
-  def run(self, assetTypes:list)->Mapping[str,List[str]]:
+  def run(self)->RunStatus:
     """
     Enumerates through all symbols
     """
-    if len(assetTypes) == 0:
-      raise ValueError('assetTypes must contain at least one item')
-
     symbols = {}
     filter_count=0
-    queue = RateLimitQueue(calls=30, per=1)
+    queue = RateLimitQueue(calls=100, per=60, fuzz=0.5)
     for alpha in list(range(65,91)) + list(range(48,57)):
       prefix = '.*'+chr(alpha)
       queue.put(prefix)
@@ -57,10 +54,6 @@ class InstrumentDiscovery(Collector):
 
       for symbol in instruments.keys():
         assetType = instruments[symbol]['assetType']
-        if not assetType in assetTypes:
-          filter_count+=1
-          continue
-        
         if not assetType in symbols:
           symbols[assetType] = [symbol]
         else:
@@ -69,4 +62,4 @@ class InstrumentDiscovery(Collector):
     print('SUMMARY: {} instruments with {} filtered...'.format(
       [{str(x):len(symbols[x])} for x in symbols.keys()], filter_count))
     
-    return symbols
+    return RunStatus.COMPLETE

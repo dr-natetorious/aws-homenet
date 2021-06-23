@@ -68,11 +68,16 @@ class FsiCollectionDataStoreConstruct(core.Construct):
     self.timeseries_database = ts.CfnDatabase(self,'Database',
       database_name='HomeNet-Fsi{}'.format(resources.landing_zone.zone_name))
 
-    self.quotes = ts.CfnTable(self,'QuotesTable',
+    self.add_timeseries_table('Quotes')
+    self.add_timeseries_table('Fundamentals')
+
+  def add_timeseries_table(self,name:str)->ts.CfnTable:
+    table = ts.CfnTable(self,name+'Table',
       database_name= self.timeseries_database.database_name,
-      table_name='Quotes',
+      table_name=name,
       retention_properties = {
         "MemoryStoreRetentionPeriodInHours": str(365 * 24),
         "MagneticStoreRetentionPeriodInDays": str(365 * 200)
       })
-    self.quotes.add_depends_on(self.timeseries_database)
+    table.add_depends_on(self.timeseries_database)
+    return table

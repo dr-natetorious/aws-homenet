@@ -1,4 +1,5 @@
 from json import dumps
+from lib.fundamentals import FundamentalCollection
 from lib.interfaces import RunStatus
 from lib.transactions import TransactionAudit
 from lib.optionable import OptionableDiscovery
@@ -31,7 +32,6 @@ is_success = {
   }
 }
 
-
 # Amazon Lambda Function Entrypoint ...
 def process_notification(event:Mapping[str,Any], context):
   print(dumps(event))
@@ -50,9 +50,9 @@ def process_notification(event:Mapping[str,Any], context):
   # Route to the correct extensions...
   if action == 'DiscoverInstruments':
     # Handle weekly instrument discovery process
-    InstrumentDiscovery(tdclient,state_store).run(event['AssetTypes'])
+    InstrumentDiscovery(tdclient,state_store).run()
+    return is_success
   elif action == 'DiscoverOptionable':
-    # Handle weekly optionable discovery process
     result = OptionableDiscovery(tdclient, state_store).run(max_items=max_tda_calls)
     return {
       'Result': {
@@ -60,7 +60,12 @@ def process_notification(event:Mapping[str,Any], context):
       }
     }
   elif action == 'CollectFundamentals':
-    print('Add CollectFundamentals code')
+    result = FundamentalCollection(tdclient, state_store).run(max_items=max_tda_calls)
+    return {
+      'Result': {
+        'RunState': str(result)
+      }
+    }
   elif action == 'CollectFinalQuotes':
     print('Add CollectFinalQuotes code')
   elif action == 'CollectTransactions':
@@ -68,7 +73,6 @@ def process_notification(event:Mapping[str,Any], context):
     lookback_days=7
     if "lookback_days" in event:
       lookback_days= int(event['lookback_days'])
-    
     TransactionAudit(tdclient,state_store).run(lookback_days)
     return is_success
   else:

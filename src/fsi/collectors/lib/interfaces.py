@@ -1,6 +1,9 @@
 from enum import Enum
 import logging
-from typing import List, Mapping
+from datetime import datetime
+from math import fabs
+from typing import Any, List, Mapping
+from ratelimitqueue.ratelimitqueue import RateLimitGetMixin
 from td.client import ExdLmtError, TDClient
 from td.exceptions import GeneralError
 from lib.ClientFactory import ClientFactory
@@ -37,3 +40,125 @@ class Collector:
 
   def run(self)->RunStatus:
     raise NotImplementedError()
+
+  def ignore_instrument(self,instrument)->bool:
+    if not 'symbol' in instrument:
+      return True
+
+    return Collector.is_garbage_symbol(instrument['symbol'])
+
+  def create_symbol_queue_from_marker(self)->RateLimitQueue:
+     # Check if the progress marker exists...
+    progress = self.state_store.get_progress(self.__class__.__name__)
+    if progress != None and "marker" in progress:
+      marker = progress['marker']
+    else:
+      marker = ''
+
+     # Populate the unfinished tasks list...
+    queue = RateLimitQueue(calls=100, per=60, fuzz=0.5)
+    ignored = []
+    filtered = []
+    for instrument in self.state_store.retrieve_equities():
+      # Check this is valid record
+      symbol = StateStore.default_value(instrument,'symbol',default=None)
+      if symbol == None:
+        continue
+      
+      # Check if the derived class wants to ignore
+      if self.ignore_instrument(instrument):
+        ignored.append(symbol)
+        continue
+      
+      # Check if the progress marker wants to skip
+      if symbol < marker:
+        filtered.append(symbol)
+        continue
+      
+      # All checks pass add into the job list
+      queue.put(instrument)
+    
+    if len(ignored)>0:
+      print('CreateQueue: Ignoring: {}'.format(len(ignored)))
+    if len(filtered)>0:
+      print('CreateQueue: Filtered: {}'.format(len(filtered)))
+    return queue
+
+  
+  @staticmethod
+  def is_garbage_symbol(symbol:str)->bool:
+    for ch in symbol:
+      if ch.isdigit():
+        return True
+      elif ch == '-':
+        return True
+      elif ch == ' ':
+        return True
+    return False
+
+class QueuedCollector(Collector):
+  def __init__(self, tdclient:TDClient, state_store:StateStore) -> None:
+    super().__init__(tdclient,state_store)
+
+  def process_instrument(self,instrument:dict)->Any:
+    raise NotImplementedError()
+
+  def persist_batch(self,batch:List[Any])->None:
+    raise NotImplementedError()
+
+  @property
+  def batch_size(self)->int:
+    return 25
+
+  #@xray_recorder.capture('OptionableDiscovery::run')
+  def run(self, max_items:int=99999)->RunStatus:
+    """
+    Discovers which symbols are optionable.
+    """
+    queue = self.create_symbol_queue_from_marker()
+    if queue.unfinished_tasks == 0:
+      raise ValueError('No tasks discovered; this is likely a defect.')
+
+    # Process the queue until empty...
+    responses = []
+    completed = 0
+    skipped = 0
+    total = queue.unfinished_tasks
+    while queue.qsize() >0:
+      try:
+        # Perform the instrument assessment...
+        instrument = queue.get()
+        assessment = self.process_instrument(instrument)
+        completed += 1
+
+        if assessment != None:
+          responses.append(assessment)
+        else:
+          skipped += 1
+        
+        # Periodically checkpoint and display progress
+        if len(responses) >0 and len(responses) % self.batch_size == 0:
+          self.persist_batch(responses)
+          self.state_store.set_progress(self.__class__.__name__, responses[-1]['symbol'])
+          responses.clear()
+          print('[{}] Completed {} / {} [{}%].  Skipped {}.'.format(
+            datetime.now(), 
+            completed, 
+            total, 
+            round(completed/total*100,2),
+            skipped))
+
+        # Check if we reached the run limit
+        if completed >= max_items:
+          return RunStatus.MORE_AVAILABLE
+      except ExdLmtError as error:
+        print('Error (sleep 5): '+str(error))
+        sleep(5)
+        queue.put(instrument)
+        continue
+
+    # Publish any remaining items in the buffer
+    if len(responses) > 0:
+      self.persist_batch(responses)
+    self.state_store.clear_progress(self.__class__.__name__)
+    return RunStatus.COMPLETE
