@@ -20,4 +20,9 @@ if __name__ == "__main__":
   #OptionableDiscovery(tdclient, state_store).run()
   #TransactionAudit(tdclient,state_store).run()
   #FundamentalCollection(tdclient,state_store).run()
-  QuoteCollection(tdclient,state_store, None).run()
+  QuoteCollection(tdclient,state_store, candle_config= {
+    "period_type": "day",
+    "period": "1",
+    "frequency_type": "minute",
+    "frequency": "1"
+  }).run()

@@ -16,7 +16,7 @@ class CandleConfiguration:
       props = {}
 
     logger.debug('Input: CandleConfig: {}' % props)
-    self.period_type=str(StateStore.default_value(props,'period','day'))
+    self.period_type=str(StateStore.default_value(props,'period_type','day'))
     self.period=str(StateStore.default_value(props,'period','1'))
     self.frequency_type=str(StateStore.default_value(props, 'frequency_type','minute'))
     self.frequency=str(StateStore.default_value(props, 'frequency','1'))
