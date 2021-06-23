@@ -14,17 +14,16 @@ class StateStore:
   """
   Represents a storage interface for the FsiCollections Service.
   """
-  def __init__(self, instrument_table_name:str, transaction_table_name:str, region_name:str) -> None:
-    assert instrument_table_name != None, "No table specified"
+  def __init__(self, instrument_table_name:str, transaction_table_name:str, quotes_table_name:str, region_name:str) -> None:
+    assert instrument_table_name != None, "No instrument_table_name specified"
+    assert transaction_table_name != None, "No transaction_table_name specified"
+    assert quotes_table_name != None, "No quotes_table_name specified"
     self.dynamodb = boto3.resource('dynamodb', region_name=region_name)
     
     # Configure instrument_table
-    self.instrument_table_name = instrument_table_name
-    self.instrument_table = self.dynamodb.Table(self.instrument_table_name)
-
-    # Configure transaction_table
-    self.transaction_table_name = transaction_table_name
-    self.transaction_table = self.dynamodb.Table(self.transaction_table_name)
+    self.instrument_table = self.dynamodb.Table(instrument_table_name)
+    self.transaction_table = self.dynamodb.Table(transaction_table_name)
+    self.quotes_table = self.dynamodb.Table(quotes_table_name)
 
   def retrieve_equities(self)->List[Mapping[str,str]]:
     query = self.instrument_table.query(
@@ -106,6 +105,32 @@ class StateStore:
       except Exception as error:
         print(str(error))
         raise error
+
+  def set_quotes(self, candles:List[dict])->None:
+    # Flatten the candles from potential 2D to 1D array
+    items=[]
+    for item in candles:
+      if type(item) == list:
+        items.extend(item)
+      elif type(item) is dict:
+        items.append(item)
+      else:
+        raise NotImplementedError('Add code here')
+    
+    with self.quotes_table.batch_writer() as batch:
+      try:
+        for candle in item:
+          symbol = candle['symbol'].upper()
+          candle['PartitionKey']= 'Fsi::Quotes::{}'.format(symbol)
+          candle['SortKey']= 'Fsi::Quote::{}::{}'.format(
+            candle['frequency_type'].upper(),
+            str(candle["datetime"]))
+          candle['Expiration']= ceil(StateStore.expiration())
+          candle['last_update']= ceil(time())
+          batch.put_item(Item=candle)
+      except Exception as error:
+        print(str(error))
+        raise error
  
   def set_fundamentals(self, fundamentals:List[dict])->None:
     with self.instrument_table.batch_writer() as batch:
@@ -153,7 +178,10 @@ class StateStore:
     if len(items) > 1:
       raise ValueError('Multiple markers detected')
 
-    # Return the last item
+    # Unwrap the progress marker and return-it
+    if len(items) == 0:
+      return None
+
     return items[-1]
 
   #@xray_recorder.capture('StateStore::declare_instruments')

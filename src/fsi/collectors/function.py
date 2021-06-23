@@ -1,4 +1,5 @@
 from json import dumps
+from lib.quotes import QuoteCollection
 from lib.fundamentals import FundamentalCollection
 from lib.interfaces import RunStatus
 from lib.transactions import TransactionAudit
@@ -11,15 +12,10 @@ from lib.ClientFactory import ClientFactory
 from typing import Any, Mapping
 
 # Configure the StateStore...
-instrument_table_name = environ.get('INSTRUMENT_TABLE_NAME')
-if instrument_table_name == None:
-  raise ValueError('No INSTRUMENT_TABLE_NAME specified')
-transaction_table_name = environ.get('TRANSACTION_TABLE_NAME')
-if transaction_table_name == None:
-  raise ValueError('No TRANSACTION_TABLE_NAME specified')
 state_store = StateStore(
-    instrument_table_name=instrument_table_name,
-    transaction_table_name=transaction_table_name,
+    instrument_table_name=environ.get('INSTRUMENT_TABLE_NAME'),
+    transaction_table_name=environ.get('TRANSACTION_TABLE_NAME'),
+    quotes_table_name=environ.get('QUOTES_TABLE_NAME'),
     region_name='us-east-2')
 
 # Determine how much time we have...
@@ -66,8 +62,13 @@ def process_notification(event:Mapping[str,Any], context):
         'RunState': str(result)
       }
     }
-  elif action == 'CollectFinalQuotes':
-    print('Add CollectFinalQuotes code')
+  elif action == 'CollectQuotes':
+    result = QuoteCollection(tdclient, state_store).run(max_items=max_tda_calls)
+    return {
+      'Result': {
+        'RunState': str(result)
+      }
+    }
   elif action == 'CollectTransactions':
     # Handle Updating transactions
     lookback_days=7

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from lib.quotes import QuoteCollection
 from lib.fundamentals import FundamentalCollection
 from os import environ
 from lib.ClientFactory import ClientFactory
@@ -12,9 +13,11 @@ if __name__ == "__main__":
   state_store = StateStore(
     instrument_table_name=environ.get('INSTRUMENT_TABLE_NAME'),
     transaction_table_name=environ.get('TRANSACTION_TABLE_NAME'),
+    quotes_table_name=environ.get('QUOTES_TABLE_NAME'),
     region_name='us-east-2')
   #InstrumentDiscovery(tdclient,state_store).run()
   #instruments = state_store.get_instruments()
-  OptionableDiscovery(tdclient, state_store).run()
+  #OptionableDiscovery(tdclient, state_store).run()
   #TransactionAudit(tdclient,state_store).run()
   #FundamentalCollection(tdclient,state_store).run()
+  QuoteCollection(tdclient,state_store).run()

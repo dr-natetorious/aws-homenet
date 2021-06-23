@@ -22,27 +22,11 @@ class OptionableDiscovery(QueuedCollector):
     Examine the instrument's symbol
     """
     symbol = instrument['symbol']
-    if Collector.is_garbage_symbol(symbol):
-      return None
-
-    # Query the Option Chain...
-    is_success = False
-    for attempt in range(1,3):
-      try:
-        chain = self.tdclient.get_options_chain(
+    chain = Collector.attempt_with_retry(
+      action=lambda: self.tdclient.get_options_chain(
           option_chain={
             'symbol':symbol,
-            'strikeCount':1})
-        is_success = True
-        break
-      except Exception as error:
-        logger.error(str(error))
-        sleep(attempt * attempt)
-        raise error
-
-    if is_success == False:
-      raise GeneralError(
-        'Unable to get_options_chain(symbol={}) within 3 attempts.'.format(symbol))
+            'strikeCount':1}))
 
     if chain == None:
       return None

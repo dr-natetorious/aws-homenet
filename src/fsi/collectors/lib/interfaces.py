@@ -5,7 +5,7 @@ from math import fabs
 from typing import Any, List, Mapping
 from ratelimitqueue.ratelimitqueue import RateLimitGetMixin
 from td.client import ExdLmtError, TDClient
-from td.exceptions import GeneralError
+from td.exceptions import GeneralError, NotFndError
 from lib.ClientFactory import ClientFactory
 from os import environ
 from json import dumps
@@ -84,7 +84,6 @@ class Collector:
       print('CreateQueue: Filtered: {}'.format(len(filtered)))
     return queue
 
-  
   @staticmethod
   def is_garbage_symbol(symbol:str)->bool:
     for ch in symbol:
@@ -95,6 +94,31 @@ class Collector:
       elif ch == ' ':
         return True
     return False
+
+  @staticmethod
+  def attempt_with_retry(action, retry_count:int=3)->Any:
+    """
+    Perform an action and automatically retry failures.
+    """
+    attempts = 0
+    while attempts < retry_count:
+      try:
+        return action()
+      except ExdLmtError as throttled:
+        print('Throttled Detected - Sleep additional 5 seconds')
+        sleep(5)
+      except NotFndError:
+        print('Resource not found')
+        return None
+      except Exception as error:
+        print(str(error))
+        attempts += 1
+
+      sleep(attempts * attempts)
+
+    # Validate the response is valid
+    raise GeneralError(
+      'Unable to {} within {} attempts.'.format(action, retry_count))
 
 class QueuedCollector(Collector):
   def __init__(self, tdclient:TDClient, state_store:StateStore) -> None:

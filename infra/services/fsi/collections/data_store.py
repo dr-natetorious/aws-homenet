@@ -24,18 +24,9 @@ class FsiCollectionDataStoreConstruct(core.Construct):
     self.__resources = resources
 
     # Configure the Instrument State Table
-    self.instrument_table = ddb.Table(self,'InstrumentTable',
-      table_name='Fsi{}-Collection-Instrument'.format(resources.landing_zone.zone_name),
-      billing_mode= ddb.BillingMode.PAY_PER_REQUEST,
-      point_in_time_recovery=True,
-      partition_key=ddb.Attribute(
-        name='PartitionKey',
-        type=ddb.AttributeType.STRING),
-      sort_key=ddb.Attribute(
-        name='SortKey',
-        type=ddb.AttributeType.STRING),
-      time_to_live_attribute='Expiration',
-    )
+    self.instrument_table = self.add_ddb_table(
+      'InstrumentTable',
+      'Fsi{}-Collection-Instrument'.format(resources.landing_zone.zone_name))
 
     self.query_by_symbol_index_name = 'query-by-symbol'
     self.instrument_table.add_global_secondary_index(
@@ -52,8 +43,23 @@ class FsiCollectionDataStoreConstruct(core.Construct):
       projection_type=ddb.ProjectionType.ALL)
 
     # Configure the Transaction Audit Table
-    self.transaction_table = ddb.Table(self,'TransactionTable',
-      table_name='Fsi{}-Collection-Transactions'.format(resources.landing_zone.zone_name),
+    self.transaction_table = self.add_ddb_table(
+      'TransactionTable',
+      'Fsi{}-Collection-Transactions'.format(resources.landing_zone.zone_name))
+      
+    self.quotes_table = self.add_ddb_table(
+      'QuoteHistoryTable',
+      'Fsi{}-Collection-Quotes'.format(resources.landing_zone.zone_name))
+
+    self.timeseries_database = ts.CfnDatabase(self,'Database',
+      database_name='HomeNet-Fsi{}'.format(resources.landing_zone.zone_name))
+
+    self.add_timeseries_table('Quotes')
+    self.add_timeseries_table('Fundamentals')
+
+  def add_ddb_table(self,id:str, table_name:str)-> ddb.Table:
+    return ddb.Table(self,id,
+      table_name=table_name,
       billing_mode= ddb.BillingMode.PAY_PER_REQUEST,
       point_in_time_recovery=True,
       partition_key=ddb.Attribute(
@@ -64,12 +70,6 @@ class FsiCollectionDataStoreConstruct(core.Construct):
         type=ddb.AttributeType.STRING),
       time_to_live_attribute='Expiration',
     )
-
-    self.timeseries_database = ts.CfnDatabase(self,'Database',
-      database_name='HomeNet-Fsi{}'.format(resources.landing_zone.zone_name))
-
-    self.add_timeseries_table('Quotes')
-    self.add_timeseries_table('Fundamentals')
 
   def add_timeseries_table(self,name:str)->ts.CfnTable:
     table = ts.CfnTable(self,name+'Table',

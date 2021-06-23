@@ -83,6 +83,7 @@ class FsiCollectorConstruct(core.Construct):
           string_parameter_name='/HomeNet/Ameritrade/client_id').string_value,
         'INSTRUMENT_TABLE_NAME': self.datastores.instrument_table.table_name,
         'TRANSACTION_TABLE_NAME': self.datastores.transaction_table.table_name,
+        'QUOTES_TABLE_NAME': self.datastores.quotes_table.table_name
       }
     )
 
@@ -101,8 +102,16 @@ class FsiCollectorConstruct(core.Construct):
     self.add_lambda_schedule('CollectFundamentals',
       schedule=events.Schedule.cron(week_day='SUN',hour="2", minute="0"))
 
-    self.add_lambda_schedule('CollectFinalQuotes',
-      schedule=events.Schedule.cron(week_day='MON-FRI',hour="23", minute="0"))
+    self.add_lambda_schedule('CollectQuotes',
+      schedule=events.Schedule.cron(week_day='MON-FRI',hour="13-23/3", minute="0"),
+      payload={
+        'CandleConfiguration':{
+          'period_type':'day',
+          'period':'1',
+          'frequency_type':'minute',
+          'frequency':'1'
+        }
+      })
     
     self.add_lambda_schedule('CollectTransactions',
       schedule=events.Schedule.cron(week_day='SUN-FRI', minute="30"))
