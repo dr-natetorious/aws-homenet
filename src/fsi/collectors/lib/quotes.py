@@ -69,8 +69,7 @@ class QuoteCollection(QueuedCollector):
       candle['period']=int(self.candle_config.period)
       StateStore.normalize(candle)
 
-    return candles
+    return {'symbol': symbol, 'candles': candles }
 
-  def persist_batch(self,batch:List[Mapping[str,Decimal]])->None:
-  #def persist_batch(self,batch:List[Any])->None:
-    self.state_store.set_quotes(batch)
+  def persist_batch(self,batch:List[Mapping[str,Any]])->None:
+    self.state_store.set_quotes([x['candles'] for x in batch])

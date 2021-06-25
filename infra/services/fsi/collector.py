@@ -50,6 +50,7 @@ class FsiCollectorConstruct(core.Construct):
     resources.tda_secret.grant_read(role)
     self.datastores.instrument_table.grant_read_write_data(role)
     self.datastores.transaction_table.grant_read_write_data(role)
+    self.datastores.quotes_table.grant_read_write_data(role)
 
     # Configure the lambda...
     self.repo = assets.DockerImageAsset(self,'Repo',
@@ -66,7 +67,7 @@ class FsiCollectorConstruct(core.Construct):
         resources.landing_zone.zone_name,
         self.component_name),
       description='Python container function for '+self.component_name,
-      timeout= core.Duration.minutes(1),
+      timeout= core.Duration.minutes(5),
       tracing= lambda_.Tracing.ACTIVE,
       vpc= resources.landing_zone.vpc,
       log_retention= RetentionDays.TWO_WEEKS,
