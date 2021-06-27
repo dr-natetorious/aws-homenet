@@ -45,38 +45,26 @@ def process_notification(event:Mapping[str,Any], context):
   
   # Route to the correct extensions...
   if action == 'DiscoverInstruments':
-    # Handle weekly instrument discovery process
-    InstrumentDiscovery(tdclient,state_store).run()
-    return is_success
+    extension = lambda: InstrumentDiscovery(tdclient,state_store).run(max_items=max_tda_calls)    
   elif action == 'DiscoverOptionable':
-    result = OptionableDiscovery(tdclient, state_store).run(max_items=max_tda_calls)
-    return {
-      'Result': {
-        'RunState': str(result)
-      }
-    }
+    extension = lambda: OptionableDiscovery(tdclient, state_store).run(max_items=max_tda_calls)
   elif action == 'CollectFundamentals':
-    result = FundamentalCollection(tdclient, state_store).run(max_items=max_tda_calls)
-    return {
-      'Result': {
-        'RunState': str(result)
-      }
-    }
+    extension = lambda: FundamentalCollection(tdclient, state_store).run(max_items=max_tda_calls)    
   elif action == 'CollectQuotes':
     candle_config = StateStore.default_value(event,'CandleConfiguration', None)
-    result = QuoteCollection(tdclient, state_store, candle_config).run(max_items=max_tda_calls)
-    return {
-      'Result': {
-        'RunState': str(result)
-      }
-    }
+    extension= lambda: QuoteCollection(tdclient, state_store, candle_config).run(max_items=max_tda_calls)    
   elif action == 'CollectTransactions':
-    # Handle Updating transactions
     lookback_days=7
     if "lookback_days" in event:
       lookback_days= int(event['lookback_days'])
-    TransactionAudit(tdclient,state_store).run(lookback_days)
-    return is_success
+    extension = lambda: TransactionAudit(tdclient,state_store).run(lookback_days)    
   else:
     raise NotImplementedError('Add code for Action='+action)
 
+  # Finally, execute the extension... 
+  result = extension()
+  return {
+      'Result': {
+        'RunState': str(result)
+      }
+    }

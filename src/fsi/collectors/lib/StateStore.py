@@ -1,4 +1,5 @@
 from decimal import Decimal
+from lib.enums import SecurityStatus
 from typing import Any, List, Mapping
 import boto3
 from logging import Logger
@@ -25,11 +26,25 @@ class StateStore:
     self.transaction_table = self.dynamodb.Table(transaction_table_name)
     self.quotes_table = self.dynamodb.Table(quotes_table_name)
 
-  def retrieve_equities(self)->List[Mapping[str,str]]:
+  def retrieve_equities(self, filter_status:List[SecurityStatus]=None)->List[Mapping[str,str]]:
     query = self.instrument_table.query(
-      KeyConditionExpression=Key('PartitionKey').eq('Fsi::Instruments::EQUITY'))
+      KeyConditionExpression=Key('PartitionKey').eq('Fsi::Instruments::EQUITY')) 
 
-    return query['Items']
+    # Filter garbage before returning...
+    if filter_status == None:
+      return query['Items']
+      
+    items = []
+    for item in query['Items']:
+      if not 'securityStatus' in item:
+        continue
+
+      securityStatus = SecurityStatus[item['securityStatus'].upper()]
+      if securityStatus in filter_status:
+        continue
+      items.append(item)
+
+    return items
 
   def retrieve_optionable(self)->List[Mapping[str,str]]:
     query = self.instrument_table.query(
@@ -71,9 +86,7 @@ class StateStore:
   def add_transactions(self, account:dict, transactions:List[Mapping[str,Any]])->None:
     with self.transaction_table.batch_writer() as batch:
       try:
-        for transaction in transactions:
-          if transaction == None:
-            continue
+        for transaction in StateStore.flatten(transactions):
 
           # Record the transaction...
           StateStore.normalize(transaction)
@@ -93,10 +106,7 @@ class StateStore:
   def set_optionable(self, instruments:List[dict])->None:
     with self.instrument_table.batch_writer() as batch:
       try:
-        for instrument in instruments:
-          if instrument == None:
-            continue
-
+        for instrument in StateStore.flatten(instruments):
           instrument['PartitionKey']= 'Fsi::Optionable'
           instrument['SortKey']= 'Fsi::Optionable::'+str(instrument['symbol']).upper()
           instrument['Expiration']= ceil(StateStore.expiration())
@@ -107,19 +117,9 @@ class StateStore:
         raise error
 
   def set_quotes(self, candles:List[dict])->None:
-    # Flatten the candles from potential 2D to 1D array
-    items=[]
-    for item in candles:
-      if type(item) == list:
-        items.extend(item)
-      elif type(item) is dict:
-        items.append(item)
-      else:
-        raise NotImplementedError('Add code here')
-    
     with self.quotes_table.batch_writer() as batch:
       try:
-        for candle in item:
+        for candle in StateStore.flatten(candles):
           symbol = candle['symbol'].upper()
           candle['PartitionKey']= 'Fsi::Quotes::{}'.format(symbol)
           candle['SortKey']= 'Fsi::Quote::{}::{}'.format(
@@ -135,10 +135,7 @@ class StateStore:
   def set_fundamentals(self, fundamentals:List[dict])->None:
     with self.instrument_table.batch_writer() as batch:
       try:
-        for instrument in fundamentals:
-          if instrument == None:
-            continue
-
+        for instrument in StateStore.flatten(fundamentals):
           instrument['PartitionKey']= 'Fsi::Fundamental'
           instrument['SortKey']= 'Fsi::Fundamental::'+str(instrument['symbol']).upper()
           instrument['Expiration']= ceil(StateStore.expiration())
@@ -188,7 +185,7 @@ class StateStore:
   def declare_instruments(self,instruments:List[dict])->None:
     try:
       with self.instrument_table.batch_writer() as batch:
-        for instrument in instruments:
+        for instrument in StateStore.flatten(instruments):
           item = self.declare_instrument(instrument)
           if not item == None:
             batch.put_item(Item=item)
@@ -197,13 +194,6 @@ class StateStore:
       raise error
 
   def declare_instrument(self, instrument:dict)->Mapping[str,Mapping[str,str]]:
-    if StateStore.default_value(instrument,'description') == 'Symbol not found':
-      return None
-    if StateStore.default_value(instrument,'exchange') == 'Pink Sheet':
-      return None
-    if StateStore.default_value(instrument,'assertType') == 'UNKNOWN':
-      return None
-
     # Register the instrument
     try:
       assetType = instrument['assetType']
@@ -221,7 +211,8 @@ class StateStore:
         'description': StateStore.default_value(instrument,'description'),
         'exchange': StateStore.default_value(instrument,'exchange'),
         'cusip': StateStore.default_value(instrument,'cusip'),
-        }
+        'securityStatus': StateStore.default_value(instrument,'securityStatus','None').upper()
+      }
       
     except Exception as error:
       logger.error(instrument)
@@ -250,3 +241,17 @@ class StateStore:
       elif type(value) is dict:
         d[key] = StateStore.normalize(value)
     return d
+
+  @staticmethod
+  def flatten(results:list)->list:
+    items = []
+    for item in results:
+      if item == None:
+        continue
+      elif type(item) == list:
+        items.extend(item)
+      elif type(item) == dict:
+        items.append(item)
+      else:
+        raise NotImplementedError('Unable to flatten instruments')
+    return items

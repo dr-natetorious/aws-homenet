@@ -1,26 +1,11 @@
-from enum import Enum
-import logging
 from datetime import datetime
-from math import fabs
-from typing import Any, List, Mapping
-from ratelimitqueue.ratelimitqueue import RateLimitGetMixin
+from lib.enums import RunStatus, SecurityStatus
+from typing import Any, List
 from td.client import ExdLmtError, TDClient
-from td.exceptions import GeneralError, NotFndError
-from lib.ClientFactory import ClientFactory
-from os import environ
-from json import dumps
-from logging import getLogger
+from td.exceptions import GeneralError, NotFndError, NotNulError
 from time import sleep
 from ratelimitqueue import RateLimitQueue
-import boto3
-from os import environ
-from base64 import b64encode
-from uuid import uuid1
 from lib.StateStore import StateStore
-
-class RunStatus(Enum):
-  MORE_AVAILABLE='MORE_AVAILABLE'
-  COMPLETE='COMPLETE'
 
 class Collector:
   def __init__(self, tdclient:TDClient, state_store:StateStore) -> None:
@@ -47,19 +32,27 @@ class Collector:
 
     return Collector.is_garbage_symbol(instrument['symbol'])
 
-  def create_symbol_queue_from_marker(self)->RateLimitQueue:
-     # Check if the progress marker exists...
+  def get_progress_marker(self)->str:
     progress = self.state_store.get_progress(self.__class__.__name__)
     if progress != None and "marker" in progress:
       marker = progress['marker']
     else:
       marker = ''
+    return marker
+
+  def fetch_known_symbols(self)->List[dict]:
+    return self.state_store.retrieve_equities(
+      filter_status=SecurityStatus.standard_ignore_list())
+
+  def create_symbol_queue_from_marker(self)->RateLimitQueue:
+     # Check if the progress marker exists...
+    marker = self.get_progress_marker()
 
      # Populate the unfinished tasks list...
     queue = RateLimitQueue(calls=100, per=60, fuzz=0.5)
     ignored = []
-    filtered = []
-    for instrument in self.state_store.retrieve_equities():
+    completed_items = []
+    for instrument in self.fetch_known_symbols():
       # Check this is valid record
       symbol = StateStore.default_value(instrument,'symbol',default=None)
       if symbol == None:
@@ -72,7 +65,7 @@ class Collector:
       
       # Check if the progress marker wants to skip
       if symbol < marker:
-        filtered.append(symbol)
+        completed_items.append(symbol)
         continue
       
       # All checks pass add into the job list
@@ -80,8 +73,8 @@ class Collector:
     
     if len(ignored)>0:
       print('CreateQueue: Ignoring: {}'.format(len(ignored)))
-    if len(filtered)>0:
-      print('CreateQueue: Filtered: {}'.format(len(filtered)))
+    if len(completed_items)>0:
+      print('CreateQueue: Completed Items: {}'.format(len(completed_items)))
     return queue
 
   @staticmethod
@@ -107,13 +100,17 @@ class Collector:
       except ExdLmtError as throttled:
         print('Throttled Detected - Sleep additional 5 seconds')
         sleep(5)
-      except NotFndError:
+      except NotFndError as error:
         print('Resource not found')
         return None
+      except NotNulError as error:
+        print('[NotNulError] This cryptic error means batch sizing too big...')
+        raise error
       except Exception as error:
         print(str(error))
         attempts += 1
 
+      print('Retry sleep {}sec'.format(attempts * attempts))
       sleep(attempts * attempts)
 
     # Validate the response is valid
@@ -134,6 +131,13 @@ class QueuedCollector(Collector):
   def batch_size(self)->int:
     return 25
 
+  def choose_progress_marker_from_batch(self,instrument, batch:list)->str:
+    last_item = batch[-1]
+    if type(last_item) is list:
+      last_item = last_item[-1]
+
+    return last_item['symbol']    
+
   #@xray_recorder.capture('OptionableDiscovery::run')
   def run(self, max_items:int=99999)->RunStatus:
     """
@@ -152,9 +156,15 @@ class QueuedCollector(Collector):
       try:
         # Perform the instrument assessment...
         instrument = queue.get()
+        count = queue.unfinished_tasks
         assessment = self.process_instrument(instrument)
         completed += 1
+        
+        # Handle scenario where more work enters the queue...
+        additions = queue.unfinished_tasks - count
+        total += additions
 
+        # Determine what to do with the response..
         if assessment != None:
           responses.append(assessment)
         else:
@@ -163,9 +173,12 @@ class QueuedCollector(Collector):
         # Periodically checkpoint and display progress
         if len(responses) >0 and len(responses) % self.batch_size == 0:
           self.persist_batch(responses)
-          self.state_store.set_progress(self.__class__.__name__, responses[-1]['symbol'])
+          self.state_store.set_progress(
+            component_name=self.__class__.__name__, 
+            marker=self.choose_progress_marker_from_batch(instrument, responses))
+
           responses.clear()
-          print('[{}] Completed {} / {} [{}%].  Skipped {}.'.format(
+          print('[{}] Completed {} / {} [{}%]'.format(
             datetime.now(), 
             completed, 
             total, 

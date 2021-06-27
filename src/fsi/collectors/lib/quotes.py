@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from lib.enums import SecurityStatus
 from lib.interfaces import Collector, QueuedCollector, RunStatus
 from typing import Any, List, Mapping
 from td.client import TDClient
@@ -43,6 +44,22 @@ class QuoteCollection(QueuedCollector):
       candle_config = CandleConfiguration(candle_config)
     
     self.candle_config = candle_config
+
+  def fetch_known_symbols(self) -> List[dict]:
+    instruments = self.state_store.retrieve_equities(
+      filter_status=SecurityStatus.standard_ignore_list())
+      
+    filtered = [
+      inst for inst in instruments 
+      if not inst['exchange'] == 'Pink Sheet'
+    ]
+
+    print('QuoteCollection.fetch_known_symbols() filtering {} into {} instruments'.format(
+      len(instruments),
+      len(filtered)
+    ))
+
+    return filtered
 
   def process_instrument(self,instrument:dict)->List[Mapping[str,Decimal]]:
     symbol = instrument['symbol']

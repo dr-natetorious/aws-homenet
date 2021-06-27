@@ -11,3 +11,6 @@ RUN pip install -r requirements.txt
 
 COPY ship-it.sh /usr/local/bin/ship-it
 RUN chmod a+x /usr/local/bin/ship-it
+
+COPY ship-fsi.sh /usr/local/bin/ship-fsi
+RUN chmod a+x /usr/local/bin/ship-fsi
