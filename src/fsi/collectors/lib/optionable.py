@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from math import ceil, trunc
-from lib.interfaces import Collector, QueuedCollector, RunStatus
+from lib.interfaces import Collector, QueuedCollector
+from lib.enums import RunStatus, SecurityStatus
 from typing import Any, List, Mapping
 from td.client import ExdLmtError, TDClient
 from td.exceptions import GeneralError
@@ -12,21 +13,32 @@ from datetime import datetime
 #from aws_xray_sdk.core import xray_recorder
 
 logger = Logger('OptionableDiscovery')
-batch_size = 25
 class OptionableDiscovery(QueuedCollector):
   def __init__(self, tdclient:TDClient, state_store:StateStore) -> None:
     super().__init__(tdclient,state_store)
+
+  @property
+  def batch_size(self) -> int:
+    return 25
+
+  def fetch_known_symbols(self) -> List[dict]:
+    """
+    Discover equities that are Normal or Halted
+    """
+    return self.state_store.retrieve_equities(
+      filter_status=SecurityStatus.standard_ignore_list())
 
   def process_instrument(self,instrument:dict)->Any:
     """
     Examine the instrument's symbol
     """
     symbol = instrument['symbol']
-    chain = Collector.attempt_with_retry(
+    chain = OptionableDiscovery.attempt_with_retry(
       action=lambda: self.tdclient.get_options_chain(
-          option_chain={
-            'symbol':symbol,
-            'strikeCount':1}))
+        option_chain={
+          'symbol':symbol,
+          'strikeCount':1
+        }))
 
     if chain == None:
       return None

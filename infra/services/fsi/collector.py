@@ -67,7 +67,7 @@ class FsiCollectorConstruct(core.Construct):
         resources.landing_zone.zone_name,
         self.component_name),
       description='Python container function for '+self.component_name,
-      timeout= core.Duration.minutes(5),
+      timeout= core.Duration.minutes(15),
       tracing= lambda_.Tracing.ACTIVE,
       vpc= resources.landing_zone.vpc,
       log_retention= RetentionDays.TWO_WEEKS,
