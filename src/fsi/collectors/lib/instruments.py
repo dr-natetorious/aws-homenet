@@ -51,7 +51,8 @@ class InstrumentDiscovery(QueuedCollector):
         prefix = '.*{}{}'.format(chr(ch),suffix)
         self.queue.put({'symbol':prefix})
       return None
-      
+    
+    print('annotate_invalid_instruments(instruments=%d)' % len(instruments))
     self.annotate_invalid_instruments(instruments)
     return list(instruments.values())
 
@@ -80,12 +81,12 @@ class InstrumentDiscovery(QueuedCollector):
       valid_tasks.append(instrument)
 
     if len(ignored_index) > 0:
-      print('Defaulted {} index functions (e.g., {}) to None'.format(
+      print('Defaulted {} index instruments (e.g., {}) to None'.format(
         len(ignored_index),
         ignored_index[0] ))
 
     if len(garbage_symbols) > 0:
-      print('Defaulted {} garbage functions (e.g., {}) to None'.format(
+      print('Defaulted {} garbage instruments (e.g., {}) to None'.format(
         len(garbage_symbols),
         garbage_symbols[0] ))
     

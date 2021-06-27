@@ -1,5 +1,5 @@
 from datetime import datetime
-from lib.enums import RunStatus
+from lib.enums import RunStatus, SecurityStatus
 from typing import Any, List
 from td.client import ExdLmtError, TDClient
 from td.exceptions import GeneralError, NotFndError, NotNulError
@@ -41,7 +41,8 @@ class Collector:
     return marker
 
   def fetch_known_symbols(self)->List[dict]:
-    return self.state_store.retrieve_equities()
+    return self.state_store.retrieve_equities(
+      filter_status=SecurityStatus.standard_ignore_list())
 
   def create_symbol_queue_from_marker(self)->RateLimitQueue:
      # Check if the progress marker exists...
@@ -99,7 +100,7 @@ class Collector:
       except ExdLmtError as throttled:
         print('Throttled Detected - Sleep additional 5 seconds')
         sleep(5)
-      except NotFndError:
+      except NotFndError as error:
         print('Resource not found')
         return None
       except NotNulError as error:
