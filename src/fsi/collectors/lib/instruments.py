@@ -2,7 +2,7 @@
 from lib.enums import SecurityStatus
 from lib.Collector import chunks
 from os import symlink
-from lib.interfaces import  QueuedCollector
+from lib.interfaces import  Collector, QueuedCollector
 from typing import Any, List, Mapping
 from td.client import ExdLmtError, TDClient
 from td.exceptions import GeneralError
@@ -61,6 +61,7 @@ class InstrumentDiscovery(QueuedCollector):
   def annotate_invalid_instruments(self, instruments:Mapping[str,Any])->None:
     valid_tasks = []
     ignored_index=[]
+    garbage_symbols=[]
     for symbol, instrument in instruments.items():
       # There's a ton of $NQ***X that doesn't actually exist?
       # TODO: This disables support for index funds and needs future consideration
@@ -68,13 +69,25 @@ class InstrumentDiscovery(QueuedCollector):
         instrument['securityStatus'] = SecurityStatus.NONE.name
         ignored_index.append(symbol)
         continue
-      else:
-        valid_tasks.append(instrument)
+      
+      # Just ignore anything that looks sus'
+      if Collector.is_garbage_symbol(symbol):
+        instrument['securityStatus'] = SecurityStatus.NONE.name
+        garbage_symbols.append(symbol)
+        continue
+      
+      # Add the task
+      valid_tasks.append(instrument)
 
     if len(ignored_index) > 0:
       print('Defaulted {} index functions (e.g., {}) to None'.format(
         len(ignored_index),
         ignored_index[0] ))
+
+    if len(garbage_symbols) > 0:
+      print('Defaulted {} garbage functions (e.g., {}) to None'.format(
+        len(garbage_symbols),
+        garbage_symbols[0] ))
     
     # Setting chunk size too high overflows in get_quotes buffer
     # TDA services responds with HttpStatus=400 and no error message
