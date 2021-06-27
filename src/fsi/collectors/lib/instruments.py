@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from lib.enums import SecurityStatus
 from lib.Collector import chunks
 from os import symlink
 from lib.interfaces import  QueuedCollector
@@ -22,7 +23,7 @@ class InstrumentDiscovery(QueuedCollector):
   def create_symbol_queue_from_marker(self) -> RateLimitQueue:
     marker = self.get_progress_marker()
 
-    self.queue = RateLimitQueue(calls=30, per=60, fuzz=0.5)
+    self.queue = RateLimitQueue(calls=60, per=60, fuzz=0.5)
     for alpha in list(range(65,91)) + list(range(48,57)):
       suffix = '.*'+chr(alpha)
       if suffix < marker:
@@ -58,23 +59,54 @@ class InstrumentDiscovery(QueuedCollector):
     self.state_store.declare_instruments(batch)
 
   def annotate_invalid_instruments(self, instruments:Mapping[str,Any])->None:
-    # Setting chunk size too high overflows a get_quotes buffer
-    # This results in a cryptic error of NotNulError
-    for chunk in InstrumentDiscovery.chunks(list(instruments.values()),300):
-      quotes = InstrumentDiscovery.attempt_with_retry(
-        action=lambda: self.tdclient.get_quotes(
-          instruments=[x['symbol'] for x in chunk]))
+    valid_tasks = []
+    ignored_index=[]
+    for symbol, instrument in instruments.items():
+      # There's a ton of $NQ***X that doesn't actually exist?
+      # TODO: This disables support for index funds and needs future consideration
+      if symbol.startswith('$'):
+        instrument['securityStatus'] = SecurityStatus.NONE.name
+        ignored_index.append(symbol)
+        continue
+      else:
+        valid_tasks.append(instrument)
 
-      for key, value in quotes.items():
-        securityStatus = value['securityStatus']
-        
-        # These seem to require inline datafixer...
-        if securityStatus == key and value['exchangeName'] == 'BATS':
-          securityStatus = 'Normal'
+    if len(ignored_index) > 0:
+      print('Defaulted {} index functions (e.g., {}) to None'.format(
+        len(ignored_index),
+        ignored_index[0] ))
+    
+    # Setting chunk size too high overflows in get_quotes buffer
+    # TDA services responds with HttpStatus=400 and no error message
+    tasks = RateLimitQueue(calls=60, per=60, fuzz=0.5)
+    for chunk in InstrumentDiscovery.chunks(list(valid_tasks), 500):
+      tasks.put(chunk)
+    
+    while tasks.qsize() > 0:
+      try:
+        chunk = tasks.get()
+        print('Attempting [offset: {} | chuck size: {} | len: {}]'.format(
+          StateStore.default_value(chunk[0], 'symbol', {'symbol:':'THE END'}),
+          len(chunk),
+          sum([len(x['symbol']) for x in chunk])
+        ))
+        quotes = InstrumentDiscovery.attempt_with_retry(
+          action=lambda: self.tdclient.get_quotes(
+            instruments=[x['symbol'] for x in chunk]))
 
-        instruments[key]['securityStatus'] = securityStatus.upper()
-        if not securityStatus in ['Normal','Unknown','Closed','None','Halted','Deleted']:
-          raise NotImplementedError('Add SecurityStatusFlag for '+securityStatus)
+        for key, value in quotes.items():
+          securityStatus = value['securityStatus']
+          
+          # These seem to require inline datafixer...
+          if securityStatus == key and value['exchangeName'] == 'BATS':
+            securityStatus = 'Normal'
+
+          instruments[key]['securityStatus'] = securityStatus.upper()
+          if not securityStatus in ['Normal','Unknown','Closed','None','Halted','Deleted']:
+            raise NotImplementedError('Add SecurityStatusFlag for '+securityStatus)
+      except NotImplementedError as error:
+        raise error
+      
 
   @staticmethod
   def chunks(lst, n):

@@ -26,17 +26,20 @@ class StateStore:
     self.transaction_table = self.dynamodb.Table(transaction_table_name)
     self.quotes_table = self.dynamodb.Table(quotes_table_name)
 
-  def retrieve_equities(self, filter_status:List[SecurityStatus])->List[Mapping[str,str]]:
+  def retrieve_equities(self, filter_status:List[SecurityStatus]=None)->List[Mapping[str,str]]:
     query = self.instrument_table.query(
       KeyConditionExpression=Key('PartitionKey').eq('Fsi::Instruments::EQUITY')) 
 
     # Filter garbage before returning...
+    if filter_status == None:
+      return query['Items']
+      
     items = []
     for item in query['Items']:
       if not 'securityStatus' in item:
         continue
 
-      securityStatus = SecurityStatus(item['securityStatus'].upper())
+      securityStatus = SecurityStatus[item['securityStatus'].upper()]
       if securityStatus in filter_status:
         continue
       items.append(item)

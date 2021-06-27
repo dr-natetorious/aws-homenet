@@ -44,26 +44,25 @@ def process_notification(event:Mapping[str,Any], context):
   tdclient = ClientFactory.create_client(force_refresh=True)
   
   # Route to the correct extensions...
-  invoke_extension = None
   if action == 'DiscoverInstruments':
-    invoke_extension = lambda: InstrumentDiscovery(tdclient,state_store).run()    
+    extension = lambda: InstrumentDiscovery(tdclient,state_store).run(max_items=max_tda_calls)    
   elif action == 'DiscoverOptionable':
-    invoke_extension = lambda: OptionableDiscovery(tdclient, state_store).run(max_items=max_tda_calls)    
+    extension = lambda: OptionableDiscovery(tdclient, state_store).run(max_items=max_tda_calls)
   elif action == 'CollectFundamentals':
-    invoke_extension = lambda: FundamentalCollection(tdclient, state_store).run(max_items=max_tda_calls)    
+    extension = lambda: FundamentalCollection(tdclient, state_store).run(max_items=max_tda_calls)    
   elif action == 'CollectQuotes':
     candle_config = StateStore.default_value(event,'CandleConfiguration', None)
-    invoke_extension= lambda: QuoteCollection(tdclient, state_store, candle_config).run(max_items=max_tda_calls)    
+    extension= lambda: QuoteCollection(tdclient, state_store, candle_config).run(max_items=max_tda_calls)    
   elif action == 'CollectTransactions':
     lookback_days=7
     if "lookback_days" in event:
       lookback_days= int(event['lookback_days'])
-    invoke_extension = lambda: TransactionAudit(tdclient,state_store).run(lookback_days)    
+    extension = lambda: TransactionAudit(tdclient,state_store).run(lookback_days)    
   else:
     raise NotImplementedError('Add code for Action='+action)
 
   # Finally, execute the extension... 
-  result = invoke_extension()
+  result = extension()
   return {
       'Result': {
         'RunState': str(result)

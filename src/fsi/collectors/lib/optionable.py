@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-from math import ceil, trunc
-from lib.interfaces import Collector, QueuedCollector
-from lib.enums import RunStatus, SecurityStatus
+from math import ceil
+from lib.interfaces import  QueuedCollector
+from lib.enums import  SecurityStatus
 from typing import Any, List, Mapping
-from td.client import ExdLmtError, TDClient
-from td.exceptions import GeneralError
+from td.client import TDClient
 from logging import Logger
 from time import sleep
-from ratelimitqueue import RateLimitQueue
 from lib.StateStore import StateStore
-from datetime import datetime
+
 #from aws_xray_sdk.core import xray_recorder
 
 logger = Logger('OptionableDiscovery')
@@ -21,7 +19,7 @@ class OptionableDiscovery(QueuedCollector):
   def batch_size(self) -> int:
     return 25
 
-  def fetch_known_symbols(self) -> List[dict]:
+  def fetch_known_instruments(self) -> List[dict]:
     """
     Discover equities that are Normal or Halted
     """

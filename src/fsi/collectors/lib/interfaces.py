@@ -50,7 +50,7 @@ class Collector:
      # Populate the unfinished tasks list...
     queue = RateLimitQueue(calls=100, per=60, fuzz=0.5)
     ignored = []
-    filtered = []
+    completed_items = []
     for instrument in self.fetch_known_symbols():
       # Check this is valid record
       symbol = StateStore.default_value(instrument,'symbol',default=None)
@@ -64,7 +64,7 @@ class Collector:
       
       # Check if the progress marker wants to skip
       if symbol < marker:
-        filtered.append(symbol)
+        completed_items.append(symbol)
         continue
       
       # All checks pass add into the job list
@@ -72,8 +72,8 @@ class Collector:
     
     if len(ignored)>0:
       print('CreateQueue: Ignoring: {}'.format(len(ignored)))
-    if len(filtered)>0:
-      print('CreateQueue: Filtered: {}'.format(len(filtered)))
+    if len(completed_items)>0:
+      print('CreateQueue: Completed Items: {}'.format(len(completed_items)))
     return queue
 
   @staticmethod
@@ -109,6 +109,7 @@ class Collector:
         print(str(error))
         attempts += 1
 
+      print('Retry sleep {}sec'.format(attempts * attempts))
       sleep(attempts * attempts)
 
     # Validate the response is valid
