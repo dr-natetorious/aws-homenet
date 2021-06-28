@@ -7,6 +7,7 @@ from aws_cdk import (
   core,
   aws_dynamodb as ddb,
   aws_timestream as ts,
+  aws_kinesis as k,
 )
 
 source_directory = 'src/fsi/collectors'
@@ -51,6 +52,10 @@ class FsiCollectionDataStoreConstruct(core.Construct):
       'QuoteHistoryTable',
       'Fsi{}-Collection-Quotes'.format(resources.landing_zone.zone_name))
 
+    self.options_table = self.add_ddb_table(
+      'OptionCache',
+      'Fsi{}-Collection-Options'.format(resources.landing_zone.zone_name))
+
     self.timeseries_database = ts.CfnDatabase(self,'Database',
       database_name='HomeNet-Fsi{}'.format(resources.landing_zone.zone_name))
 
@@ -58,10 +63,11 @@ class FsiCollectionDataStoreConstruct(core.Construct):
     self.add_timeseries_table('Fundamentals')
 
   def add_ddb_table(self,id:str, table_name:str)-> ddb.Table:
-    return ddb.Table(self,id,
+    table= ddb.Table(self,id,
       table_name=table_name,
       billing_mode= ddb.BillingMode.PAY_PER_REQUEST,
       point_in_time_recovery=True,
+      stream= ddb.StreamViewType.NEW_AND_OLD_IMAGES,
       partition_key=ddb.Attribute(
         name='PartitionKey',
         type=ddb.AttributeType.STRING),
@@ -70,6 +76,12 @@ class FsiCollectionDataStoreConstruct(core.Construct):
         type=ddb.AttributeType.STRING),
       time_to_live_attribute='Expiration',
     )
+
+    # stream = k.Stream(self,table_name+'Stream',
+    #   retention_period=core.Duration.days(90),
+    #   stream_name=table_name+"_Updates")
+
+    return table
 
   def add_timeseries_table(self,name:str)->ts.CfnTable:
     table = ts.CfnTable(self,name+'Table',

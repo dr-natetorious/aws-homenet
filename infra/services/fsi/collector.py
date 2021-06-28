@@ -1,4 +1,5 @@
 import builtins
+from infra.services.fsi.collections.eventing import FsiCollectionsEventing
 from typing import Any, Mapping
 from aws_cdk.aws_logs import RetentionDays
 from infra.services.fsi.resources import FsiSharedResources
@@ -33,6 +34,9 @@ class FsiCollectorConstruct(core.Construct):
     self.datastores = FsiCollectionDataStoreConstruct(self,'DataStores',
       resources=self.resources,
       subnet_group_name=subnet_group_name)
+
+    self.eventing = FsiCollectionsEventing(self,'Eventing',
+      landing_zone=resources.landing_zone)
 
     # Configure role...
     role = iam.Role(self,'Role',
@@ -84,7 +88,9 @@ class FsiCollectorConstruct(core.Construct):
           string_parameter_name='/HomeNet/Ameritrade/client_id').string_value,
         'INSTRUMENT_TABLE_NAME': self.datastores.instrument_table.table_name,
         'TRANSACTION_TABLE_NAME': self.datastores.transaction_table.table_name,
-        'QUOTES_TABLE_NAME': self.datastores.quotes_table.table_name
+        'QUOTES_TABLE_NAME': self.datastores.quotes_table.table_name,
+        'OPTIONS_TABLE_NAME': self.datastores.options_table.table_name,
+        'EVENT_BUS_NAME': self.eventing.event_bus.event_bus_name,
       }
     )
 

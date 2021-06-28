@@ -35,7 +35,7 @@ class CandleConfiguration:
   def __str__(self)->str:
     return str(self.to_dict())
 
-logger = Logger('FundamentalCollection')
+logger = Logger('QuoteCollection')
 class QuoteCollection(QueuedCollector):
   def __init__(self, tdclient:TDClient, state_store:StateStore, candle_config:CandleConfiguration) -> None:
     super().__init__(tdclient,state_store)

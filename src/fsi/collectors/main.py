@@ -4,8 +4,8 @@ from lib.fundamentals import FundamentalCollection
 from os import environ
 from lib.ClientFactory import ClientFactory
 from lib.StateStore import StateStore
-from lib.instruments import InstrumentDiscovery
-from lib.optionable import OptionableDiscovery
+from lib.discovery.instruments import InstrumentDiscovery
+from lib.discovery.optionable import OptionableDiscovery
 from lib.transactions import TransactionAudit
 
 if __name__ == "__main__":
@@ -14,6 +14,7 @@ if __name__ == "__main__":
     instrument_table_name=environ.get('INSTRUMENT_TABLE_NAME'),
     transaction_table_name=environ.get('TRANSACTION_TABLE_NAME'),
     quotes_table_name=environ.get('QUOTES_TABLE_NAME'),
+    options_table_name=environ.get('OPTIONS_TABLE_NAME'),
     region_name='us-east-2')
   #InstrumentDiscovery(tdclient,state_store).run()
   #instruments = state_store.get_instruments()

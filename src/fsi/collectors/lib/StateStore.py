@@ -15,16 +15,19 @@ class StateStore:
   """
   Represents a storage interface for the FsiCollections Service.
   """
-  def __init__(self, instrument_table_name:str, transaction_table_name:str, quotes_table_name:str, region_name:str) -> None:
+  def __init__(self, instrument_table_name:str, transaction_table_name:str, quotes_table_name:str, options_table_name:str, region_name:str) -> None:
     assert instrument_table_name != None, "No instrument_table_name specified"
     assert transaction_table_name != None, "No transaction_table_name specified"
     assert quotes_table_name != None, "No quotes_table_name specified"
+    assert options_table_name != None, "No options_table_name specified"
+    
     self.dynamodb = boto3.resource('dynamodb', region_name=region_name)
     
     # Configure instrument_table
     self.instrument_table = self.dynamodb.Table(instrument_table_name)
     self.transaction_table = self.dynamodb.Table(transaction_table_name)
     self.quotes_table = self.dynamodb.Table(quotes_table_name)
+    self.options_table = self.dynamodb.Table(options_table_name)
 
   def retrieve_equities(self, filter_status:List[SecurityStatus]=None)->List[Mapping[str,str]]:
     query = self.instrument_table.query(

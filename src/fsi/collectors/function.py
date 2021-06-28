@@ -1,12 +1,12 @@
 from json import dumps
 from lib.quotes import QuoteCollection
-from lib.fundamentals import FundamentalCollection
+from lib.point_in_time.fundamentals import FundamentalCollection
 from lib.interfaces import RunStatus
 from lib.transactions import TransactionAudit
-from lib.optionable import OptionableDiscovery
+from lib.discovery.optionable import OptionableDiscovery
 from os import environ
 from math import floor
-from lib.instruments import InstrumentDiscovery
+from lib.discovery.instruments import InstrumentDiscovery
 from lib.StateStore import StateStore
 from lib.ClientFactory import ClientFactory
 from typing import Any, Mapping
