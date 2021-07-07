@@ -132,7 +132,7 @@ class QueuedCollector(Collector):
     return 25
 
   def choose_progress_marker_from_batch(self,instrument, batch:list)->str:
-    last_item = batch[-1]
+    last_item = [x for x in batch if not x == None][-1]
     if type(last_item) is list:
       last_item = last_item[-1]
 
@@ -165,10 +165,12 @@ class QueuedCollector(Collector):
         total += additions
 
         # Determine what to do with the response..
-        if assessment != None:
-          responses.append(assessment)
-        else:
+        if assessment == None:
           skipped += 1
+        elif type(assessment) == list and len(assessment) == 0:
+          skipped += 1
+        else:
+          responses.append(assessment)
         
         # Periodically checkpoint and display progress
         if len(responses) >0 and len(responses) % self.batch_size == 0:
@@ -193,6 +195,9 @@ class QueuedCollector(Collector):
         sleep(5)
         queue.put(instrument)
         continue
+      except Exception as error:
+        print('Unhandled Error: '+str(error))
+        raise error
 
     # Publish any remaining items in the buffer
     if len(responses) > 0:

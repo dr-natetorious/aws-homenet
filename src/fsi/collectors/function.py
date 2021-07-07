@@ -1,4 +1,5 @@
 from json import dumps
+from lib.point_in_time.options import OptionsCollection
 from lib.quotes import QuoteCollection
 from lib.point_in_time.fundamentals import FundamentalCollection
 from lib.interfaces import RunStatus
@@ -16,6 +17,7 @@ state_store = StateStore(
     instrument_table_name=environ.get('INSTRUMENT_TABLE_NAME'),
     transaction_table_name=environ.get('TRANSACTION_TABLE_NAME'),
     quotes_table_name=environ.get('QUOTES_TABLE_NAME'),
+    options_table_name=environ.get('OPTIONS_TABLE_NAME'),
     region_name='us-east-2')
 
 # Determine how much time we have...
@@ -52,7 +54,9 @@ def process_notification(event:Mapping[str,Any], context):
     extension = lambda: FundamentalCollection(tdclient, state_store).run(max_items=max_tda_calls)    
   elif action == 'CollectQuotes':
     candle_config = StateStore.default_value(event,'CandleConfiguration', None)
-    extension= lambda: QuoteCollection(tdclient, state_store, candle_config).run(max_items=max_tda_calls)    
+    extension= lambda: QuoteCollection(tdclient, state_store, candle_config).run(max_items=max_tda_calls)
+  elif action == 'CollectOptions':
+    extension= lambda: OptionsCollection(tdclient, state_store).run(max_items=max_tda_calls)
   elif action == 'CollectTransactions':
     lookback_days=7
     if "lookback_days" in event:

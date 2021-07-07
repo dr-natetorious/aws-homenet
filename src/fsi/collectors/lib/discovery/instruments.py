@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 from lib.enums import SecurityStatus
-from lib.Collector import chunks
-from os import symlink
 from lib.interfaces import  Collector, QueuedCollector
 from typing import Any, List, Mapping
 from td.client import ExdLmtError, TDClient

@@ -15,6 +15,7 @@ from aws_cdk import (
   aws_ec2 as ec2,
   aws_ssm as ssm,
   aws_sqs as sqs,
+  aws_secretsmanager as sm,
 )
 
 source_directory = 'src/fsi/collectors'
@@ -55,6 +56,7 @@ class FsiCollectorConstruct(core.Construct):
     self.datastores.instrument_table.grant_read_write_data(role)
     self.datastores.transaction_table.grant_read_write_data(role)
     self.datastores.quotes_table.grant_read_write_data(role)
+    self.datastores.options_table.grant_read_write_data(role)
 
     # Configure the lambda...
     self.repo = assets.DockerImageAsset(self,'Repo',
@@ -90,7 +92,6 @@ class FsiCollectorConstruct(core.Construct):
         'TRANSACTION_TABLE_NAME': self.datastores.transaction_table.table_name,
         'QUOTES_TABLE_NAME': self.datastores.quotes_table.table_name,
         'OPTIONS_TABLE_NAME': self.datastores.options_table.table_name,
-        'EVENT_BUS_NAME': self.eventing.event_bus.event_bus_name,
       }
     )
 

@@ -1,4 +1,5 @@
 from decimal import Decimal
+import re
 from lib.enums import SecurityStatus
 from typing import Any, List, Mapping
 import boto3
@@ -118,6 +119,46 @@ class StateStore:
       except Exception as error:
         print(str(error))
         raise error
+
+  def set_option_chains(self, contracts:List[dict])->None:
+    with self.options_table.batch_writer() as batch:
+      try:
+        for contract in StateStore.flatten(contracts):
+          # Persist the primary record...
+          symbol = str(contract['symbol']).upper()
+          contract['PartitionKey']= 'Fsi::Option::{}::{}::{}::{}'.format(
+            symbol,
+            contract['series'],
+            contract['putCall'],
+            '%.2f' % contract['strike']
+          )
+          contract['SortKey'] = 'dte=%04d' %contract['daysToExpiration']
+          contract['Expiration']= ceil(StateStore.expiration())
+          contract['last_update']= ceil(time())
+          StateStore.normalize(contract)
+          batch.put_item(Item=contract)
+
+          # Add Mapping record...
+          record = {}
+          record['PartitionKey'] = 'Fsi::Option::{}'.format(symbol)
+          record['SortKey'] = contract['PartitionKey']
+          record['Expiration']= ceil(StateStore.expiration())
+          record['last_update']= ceil(time())
+
+          record['strike'] = contract['strike']
+          record['delta'] = contract['delta']
+          record['gamma'] = contract['gamma']
+          record['vega'] = contract['vega']
+          record['theta'] = contract['theta']
+          record['mark'] = contract['mark']
+          record['underlyingPrice'] = contract['underlyingPrice']
+          record['daysToExpiration'] = contract['daysToExpiration']
+          batch.put_item(Item=record)
+
+      except Exception as error:
+        print(str(error))
+        raise error
+
 
   def set_quotes(self, candles:List[dict])->None:
     with self.quotes_table.batch_writer() as batch:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from lib.quotes import QuoteCollection
-from lib.fundamentals import FundamentalCollection
+from lib.point_in_time.fundamentals import FundamentalCollection
+from lib.point_in_time.options import OptionsCollection
 from os import environ
 from lib.ClientFactory import ClientFactory
 from lib.StateStore import StateStore
@@ -18,12 +19,13 @@ if __name__ == "__main__":
     region_name='us-east-2')
   #InstrumentDiscovery(tdclient,state_store).run()
   #instruments = state_store.get_instruments()
-  #OptionableDiscovery(tdclient, state_store).run()
+  OptionableDiscovery(tdclient, state_store).run()
   #TransactionAudit(tdclient,state_store).run()
   #FundamentalCollection(tdclient,state_store).run()
-  QuoteCollection(tdclient,state_store, candle_config= {
-    "period_type": "day",
-    "period": "1",
-    "frequency_type": "minute",
-    "frequency": "1"
-  }).run()
+  OptionsCollection(tdclient,state_store).run()
+  # QuoteCollection(tdclient,state_store, candle_config= {
+  #   "period_type": "day",
+  #   "period": "1",
+  #   "frequency_type": "minute",
+  #   "frequency": "1"
+  # }).run()

@@ -45,6 +45,7 @@ class OptionableDiscovery(QueuedCollector):
     return {
       'symbol': symbol,
       'exchange': instrument['exchange'],
+      'securityStatus': instrument['securityStatus'],
       'is_optionable': chain['status'] == 'SUCCESS',
       'numberOfContracts': ceil(StateStore.default_value(chain,'numberOfContracts',0)),
       'volatility': ceil(StateStore.default_value(chain,'volatility',0)),
