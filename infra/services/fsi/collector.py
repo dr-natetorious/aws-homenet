@@ -93,12 +93,7 @@ class FsiCollectorConstruct(core.Construct):
         'QUOTES_TABLE_NAME': self.datastores.quotes_table.table_name,
         'OPTIONS_TABLE_NAME': self.datastores.options_table.table_name,
       }
-    )
-
-    # Define the long running process workflow...
-    self.long_running_process = FsiLongRunningCollectionProcess(self,'FsiLongRunningCollectionProcess',
-      resources=self.resources,
-      function= self.function)
+    )    
 
     # Define the execution schedule...
     self.add_lambda_schedule('DiscoverInstruments',
@@ -110,7 +105,18 @@ class FsiCollectorConstruct(core.Construct):
     self.add_lambda_schedule('CollectFundamentals',
       schedule=events.Schedule.cron(week_day='SUN',hour="2", minute="0"))
 
-    self.add_states_schedule('CollectQuotes',
+    self.add_states_schedule('CollectIntradayQuotes',
+      schedule=events.Schedule.cron(week_day='MON-FRI',hour="13-23/3", minute="0"),
+      payload={
+        'CandleConfiguration':{
+          'period_type':'day',
+          'period':'1',
+          'frequency_type':'minute',
+          'frequency':'1'
+        }
+      })
+
+    self.add_states_schedule('CollectWeeklyQuotes',
       schedule=events.Schedule.cron(week_day='MON-FRI',hour="13-23/3", minute="0"),
       payload={
         'CandleConfiguration':{
@@ -134,8 +140,8 @@ class FsiCollectorConstruct(core.Construct):
 
     # Create schedules...
     events.Rule(self,action+'Rule',
-      rule_name='Fsi{}-Collector_{}'.format(self.resources.landing_zone.zone_name, action),
-      description='Fsi Collector '+action,
+      rule_name='Fsi{}-Collector_{}_{}'.format(self.resources.landing_zone.zone_name, self.component_name, action),
+      description='Fsi Collector for '+action,
       schedule= schedule,
       #schedule= events.Schedule.rate(core.Duration.minutes(1)),
       targets=[
@@ -157,19 +163,25 @@ class FsiCollectorConstruct(core.Construct):
       payload={}
     payload['Action']=action
 
+    # Define the long running process workflow...
+    name_prefix = 'Fsi{}-Collector_{}'.format(self.resources.landing_zone.zone_name, action)
+
+    long_running_process = FsiLongRunningCollectionProcess(self,name_prefix,
+      action_name= action,
+      resources=self.resources,
+      function= self.function)
+
     # Create schedules...
     events.Rule(self,action+'Rule',
-      rule_name='Fsi{}-Collector_{}'.format(self.resources.landing_zone.zone_name, action),
+      rule_name='{}'.format(name_prefix),
       description='Fsi Collector '+action,
       schedule= schedule,
       #schedule= events.Schedule.rate(core.Duration.minutes(1)),
       targets=[
         targets.SfnStateMachine(
-          machine=self.long_running_process.state_machine,
-          dead_letter_queue=sqs.Queue(self,'{}_dlq'.format(action),
-            queue_name='Fsi{}-Collector_{}_dlq'.format(
-              self.resources.landing_zone.zone_name,
-              action),
+          machine=long_running_process.state_machine,
+          dead_letter_queue=sqs.Queue(self,'{}_dlq'.format(name_prefix),
+            queue_name='{}_dlq'.format(name_prefix),
             removal_policy= core.RemovalPolicy.DESTROY),
           input= events.RuleTargetInput.from_object({
             'Payload': payload

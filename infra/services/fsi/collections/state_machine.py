@@ -4,15 +4,7 @@ from aws_cdk.aws_logs import LogGroup, RetentionDays
 from infra.services.fsi.resources import FsiSharedResources
 from aws_cdk import (
   core,
-  aws_dynamodb as ddb,
-  aws_ecr_assets as assets,
   aws_lambda as lambda_,
-  aws_events as events,
-  aws_events_targets as targets,
-  aws_iam as iam,
-  aws_ec2 as ec2,
-  aws_ssm as ssm,
-  aws_sqs as sqs,
   aws_stepfunctions as sf,
   aws_stepfunctions_tasks as sft,
   aws_logs as logs,
@@ -27,7 +19,7 @@ class FsiLongRunningCollectionProcess(core.Construct):
   def resources(self)->FsiSharedResources:
     return self.__resources
 
-  def __init__(self, scope: core.Construct, id: builtins.str, resources:FsiSharedResources, function:lambda_.Function) -> None:
+  def __init__(self, scope: core.Construct, id: builtins.str, action_name:str, resources:FsiSharedResources, function:lambda_.Function) -> None:
     super().__init__(scope, id)    
     self.__resources = resources
 
@@ -54,14 +46,14 @@ class FsiLongRunningCollectionProcess(core.Construct):
     # Register the definition as StateMachine...
     zone_name=self.resources.landing_zone.zone_name
     self.state_machine = sf.StateMachine(self,'StateMachine',
-      state_machine_name='Fsi{}-LongRunningCollectionProcess'.format(zone_name),
+      state_machine_name='Fsi{}-Collection_{}'.format(zone_name, id),
       state_machine_type= sf.StateMachineType.STANDARD,
       timeout=core.Duration.hours(2),
       logs= sf.LogOptions(
         destination= logs.LogGroup(self,'LogGroup',
           removal_policy= core.RemovalPolicy.DESTROY,
           retention= RetentionDays.TWO_WEEKS,
-          log_group_name='/homenet/fsi-{}/states/{}'.format(zone_name, self.component_name).lower())
+          log_group_name='/homenet/fsi-{}/states/{}/{}'.format(zone_name, self.component_name, action_name).lower())
       ),
       tracing_enabled=True,
       definition= definition)
