@@ -1,4 +1,5 @@
 import builtins
+from infra.services.fsi.secrets_mgmt import FsiSecretManagement
 from infra.services.fsi.earnings_api import FsiEarningsGateway
 from infra.interfaces import IVpcLandingZone
 from infra.services.fsi.collector import FsiCollectorConstruct
@@ -17,3 +18,4 @@ class FsiRootConstruct(core.Construct):
     FsiAmeritradeAuthGateway(self,'AmeritradeAuth', resources=self.resources)
     FsiCollectorConstruct(self,'Collector', resources=self.resources)
     FsiEarningsGateway(self,'EarningsGateway',resources=self.resources)
+    FsiSecretManagement(self,'SecretsMgmt',resources=self.resources)
