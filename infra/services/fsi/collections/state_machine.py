@@ -23,6 +23,8 @@ class FsiLongRunningCollectionProcess(core.Construct):
     super().__init__(scope, id)    
     self.__resources = resources
 
+    state_machine_name = id
+
     # Define the state machine definition...
     invoke_function = sft.LambdaInvoke(self,'InvokeFunction',
       lambda_function=function,
@@ -46,7 +48,7 @@ class FsiLongRunningCollectionProcess(core.Construct):
     # Register the definition as StateMachine...
     zone_name=self.resources.landing_zone.zone_name
     self.state_machine = sf.StateMachine(self,'StateMachine',
-      state_machine_name='Fsi{}-Collection_{}'.format(zone_name, id),
+      state_machine_name= state_machine_name,
       state_machine_type= sf.StateMachineType.STANDARD,
       timeout=core.Duration.hours(2),
       logs= sf.LogOptions(

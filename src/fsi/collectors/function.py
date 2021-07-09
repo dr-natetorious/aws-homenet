@@ -1,6 +1,6 @@
 from json import dumps
 from lib.point_in_time.options import OptionsCollection
-from lib.quotes import QuoteCollection
+from lib.quotes import HistoricQuoteCollection
 from lib.point_in_time.fundamentals import FundamentalCollection
 from lib.interfaces import RunStatus
 from lib.transactions import TransactionAudit
@@ -52,9 +52,9 @@ def process_notification(event:Mapping[str,Any], context):
     extension = lambda: OptionableDiscovery(tdclient, state_store).run(max_items=max_tda_calls)
   elif action == 'CollectFundamentals':
     extension = lambda: FundamentalCollection(tdclient, state_store).run(max_items=max_tda_calls)    
-  elif action == 'CollectQuotes':
+  elif action == 'CollectHistoric':
     candle_config = StateStore.default_value(event,'CandleConfiguration', None)
-    extension= lambda: QuoteCollection(tdclient, state_store, candle_config).run(max_items=max_tda_calls)
+    extension= lambda: HistoricQuoteCollection(tdclient, state_store, candle_config).run(max_items=max_tda_calls)
   elif action == 'CollectOptions':
     extension= lambda: OptionsCollection(tdclient, state_store).run(max_items=max_tda_calls)
   elif action == 'CollectTransactions':

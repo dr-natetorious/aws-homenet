@@ -43,7 +43,12 @@ class StateStore:
       if not 'securityStatus' in item:
         continue
 
-      securityStatus = SecurityStatus[item['securityStatus'].upper()]
+      # Get Security Type
+      try:
+        securityStatus = SecurityStatus[item['securityStatus'].upper()]
+      except:
+        securityStatus = SecurityStatus.NOTIMPLEMENTED
+
       if securityStatus in filter_status:
         continue
       items.append(item)
@@ -153,6 +158,7 @@ class StateStore:
           record['mark'] = contract['mark']
           record['underlyingPrice'] = contract['underlyingPrice']
           record['daysToExpiration'] = contract['daysToExpiration']
+          StateStore.normalize(record)
           batch.put_item(Item=record)
 
       except Exception as error:
@@ -284,6 +290,11 @@ class StateStore:
         d[key] = round(Decimal(value),4)
       elif type(value) is dict:
         d[key] = StateStore.normalize(value)
+      elif type(value) is list:
+        for x in value:
+          if type(x) is dict:
+            StateStore.normalize(x)
+
     return d
 
   @staticmethod

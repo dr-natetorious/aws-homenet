@@ -96,7 +96,7 @@ class FsiCollectorConstruct(core.Construct):
     )    
 
     # Define the execution schedule...
-    self.add_lambda_schedule('DiscoverInstruments',
+    self.add_states_schedule('DiscoverInstruments',
       schedule=events.Schedule.cron(week_day='SUN',hour="0", minute="0"))
 
     self.add_states_schedule('DiscoverOptionable',
@@ -105,9 +105,10 @@ class FsiCollectorConstruct(core.Construct):
     self.add_lambda_schedule('CollectFundamentals',
       schedule=events.Schedule.cron(week_day='SUN',hour="2", minute="0"))
 
-    self.add_states_schedule('CollectIntradayQuotes',
+    self.add_states_schedule('CollectIntraday',
       schedule=events.Schedule.cron(week_day='MON-FRI',hour="13-23/3", minute="0"),
       payload={
+        'Action': 'CollectHistoric',
         'CandleConfiguration':{
           'period_type':'day',
           'period':'1',
@@ -116,9 +117,13 @@ class FsiCollectorConstruct(core.Construct):
         }
       })
 
-    self.add_states_schedule('CollectWeeklyQuotes',
-      schedule=events.Schedule.cron(week_day='MON-FRI',hour="13-23/3", minute="0"),
+    self.add_states_schedule('CollectOptions',
+      schedule=events.Schedule.cron(week_day='MON-FRI',hour="12-23/3", minute="0"))
+
+    self.add_states_schedule('CollectClosingBell',
+      schedule=events.Schedule.cron(week_day='MON-FRI',hour="23", minute="0"),
       payload={
+        'Action': 'CollectHistoric',
         'CandleConfiguration':{
           'period_type':'day',
           'period':'1',
@@ -126,8 +131,20 @@ class FsiCollectorConstruct(core.Construct):
           'frequency':'1'
         }
       })
+
+    self.add_states_schedule('CollectHistoric',
+      schedule=events.Schedule.cron(week_day='SAT',hour="0", minute="0"),
+      payload={
+        'Action': 'CollectHistoric',
+        'CandleConfiguration':{
+          'period_type':'year',
+          'period':'20',
+          'frequency_type':'daily',
+          'frequency':'1'
+        }
+      })
     
-    self.add_lambda_schedule('CollectTransactions',
+    self.add_states_schedule('CollectTransactions',
       schedule=events.Schedule.cron(week_day='SUN-FRI', minute="30"))
 
   def add_lambda_schedule(self, action:str, schedule:events.Schedule, payload:Mapping[str,Any]=None)->None:
@@ -161,7 +178,9 @@ class FsiCollectorConstruct(core.Construct):
     """
     if payload == None:
       payload={}
-    payload['Action']=action
+
+    if not 'Action' in payload:
+      payload['Action']=action
 
     # Define the long running process workflow...
     name_prefix = 'Fsi{}-Collector_{}'.format(self.resources.landing_zone.zone_name, action)

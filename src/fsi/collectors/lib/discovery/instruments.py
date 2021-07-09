@@ -113,9 +113,11 @@ class InstrumentDiscovery(QueuedCollector):
           if securityStatus == key and value['exchangeName'] == 'BATS':
             securityStatus = 'Normal'
 
-          instruments[key]['securityStatus'] = securityStatus.upper()
           if not securityStatus in ['Normal','Unknown','Closed','None','Halted','Deleted']:
-            raise NotImplementedError('Add SecurityStatusFlag for '+securityStatus)
+            securityStatus = 'NotImplemented'
+
+          instruments[key]['securityStatus'] = securityStatus.upper()
+          
       except NotImplementedError as error:
         raise error
       

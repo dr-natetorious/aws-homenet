@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from lib.quotes import QuoteCollection
+from lib.quotes import HistoricQuoteCollection
 from lib.point_in_time.fundamentals import FundamentalCollection
 from lib.point_in_time.options import OptionsCollection
 from os import environ
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     region_name='us-east-2')
   #InstrumentDiscovery(tdclient,state_store).run()
   #instruments = state_store.get_instruments()
-  OptionableDiscovery(tdclient, state_store).run()
+  #OptionableDiscovery(tdclient, state_store).run()
   #TransactionAudit(tdclient,state_store).run()
   #FundamentalCollection(tdclient,state_store).run()
   OptionsCollection(tdclient,state_store).run()

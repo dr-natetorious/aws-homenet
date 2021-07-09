@@ -11,6 +11,7 @@ class SecurityStatus(Enum):
   NONE='NONE'
   HALTED='HALTED'
   DELETED='DELETED'
+  NOTIMPLEMENTED='NOTIMPLEMENTED'
 
   @staticmethod
   def standard_ignore_list()->list:
@@ -18,5 +19,6 @@ class SecurityStatus(Enum):
       SecurityStatus.UNKNOWN,
       SecurityStatus.NONE,
       SecurityStatus.CLOSED,
-      SecurityStatus.DELETED
+      SecurityStatus.DELETED,
+      SecurityStatus.NOTIMPLEMENTED,
     ]
