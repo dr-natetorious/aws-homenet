@@ -24,3 +24,7 @@ class RotationRequest:
   @property
   def client_request_token(self)->str:
     return self.__client_request_token
+
+class IRotationHandler:
+  def create_secret(request:RotationRequest, context:dict)->dict:
+    pass
