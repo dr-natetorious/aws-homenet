@@ -41,8 +41,12 @@ class Collector:
     return marker
 
   def fetch_known_symbols(self)->List[dict]:
-    return self.state_store.retrieve_equities(
+    equities = self.state_store.retrieve_equities(
       filter_status=SecurityStatus.standard_ignore_list())
+
+    without_pinksheets = [e for e in equities if not e['exchange'] == 'Pink Sheet']
+    return without_pinksheets
+    
 
   def create_symbol_queue_from_marker(self)->RateLimitQueue:
      # Check if the progress marker exists...

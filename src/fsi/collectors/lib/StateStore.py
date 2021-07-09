@@ -1,5 +1,4 @@
 from decimal import Decimal
-import re
 from lib.enums import SecurityStatus
 from typing import Any, List, Mapping
 import boto3
@@ -30,16 +29,33 @@ class StateStore:
     self.quotes_table = self.dynamodb.Table(quotes_table_name)
     self.options_table = self.dynamodb.Table(options_table_name)
 
-  def retrieve_equities(self, filter_status:List[SecurityStatus]=None)->List[Mapping[str,str]]:
-    query = self.instrument_table.query(
-      KeyConditionExpression=Key('PartitionKey').eq('Fsi::Instruments::EQUITY')) 
-
-    # Filter garbage before returning...
-    if filter_status == None:
-      return query['Items']
-      
+  @staticmethod
+  def query_table(table, query_kwags:dict)->List[dict]:
+    """
+    Paginates across all response pages and returns one final list.
+    """
+    done = False
+    start_key = None
     items = []
-    for item in query['Items']:
+    while not done:
+      if start_key:
+        query_kwags['ExclusiveStartKey'] = start_key
+
+      response = table.query(**query_kwags)
+      items.extend(response.get('Items',[]))
+      start_key = response.get('LastEvaluatedKey',None)
+      done = start_key is None
+
+    return items
+
+  def retrieve_equities(self, filter_status:List[SecurityStatus]=None)->List[Mapping[str,str]]:
+    query_kwags = {
+      'KeyConditionExpression':Key('PartitionKey').eq('Fsi::Instruments::EQUITY'),
+    }
+
+    query = StateStore.query_table(self.instrument_table, query_kwags)
+    results=[]
+    for item in query:
       if not 'securityStatus' in item:
         continue
 
@@ -51,15 +67,21 @@ class StateStore:
 
       if securityStatus in filter_status:
         continue
-      items.append(item)
+      results.append(item)
 
-    return items
+    return results
 
   def retrieve_optionable(self)->List[Mapping[str,str]]:
-    query = self.instrument_table.query(
-      KeyConditionExpression=Key('PartitionKey').eq('Fsi::Optionable'))
+    query_kwags = {
+      'KeyConditionExpression':Key('PartitionKey').eq('Fsi::Optionable')
+    }
 
-    return query['Items']
+    query = StateStore.query_table(self.instrument_table, query_kwags)
+    return query
+    # query = self.instrument_table.query(
+    #   KeyConditionExpression=Key('PartitionKey').eq('Fsi::Optionable'))
+
+    # return query['Items']
 
   #@xray_recorder.capture('StateStore::set_account')
   def set_account(self, account:dict, balances:Mapping[str,dict])->None:
@@ -237,8 +259,19 @@ class StateStore:
       with self.instrument_table.batch_writer() as batch:
         for instrument in StateStore.flatten(instruments):
           item = self.declare_instrument(instrument)
-          if not item == None:
-            batch.put_item(Item=item)
+          if item == None:
+            continue
+
+          # Write the instrument record
+          batch.put_item(Item=item)
+
+          # Update the SecurityStatus index...
+          record = dict(item)
+          record['PartitionKey']= 'Fsi::SecurityStatus::{}'.format(StateStore.default_value(instrument,'securityStatus','None').upper())
+          record['SortKey']='Fsi::Instruments::'+str(instrument['symbol']).upper()
+          record['Expiration']= ceil(StateStore.expiration(days=30))
+          record['last_update']=ceil(time())
+          batch.put_item(Item=record)
     except Exception as error:
       print(str(error))
       raise error
@@ -270,7 +303,7 @@ class StateStore:
       raise error
 
   @staticmethod
-  def expiration(days=90)->int:
+  def expiration(days=1460)->int:
     dt = datetime.utcnow() + timedelta(days=days)
     return round((dt-epoch).total_seconds(),0)
 
