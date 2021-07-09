@@ -102,7 +102,7 @@ class FsiCollectorConstruct(core.Construct):
     self.add_states_schedule('DiscoverOptionable',
       schedule=events.Schedule.cron(week_day='SUN',hour="1", minute="0"))
 
-    self.add_lambda_schedule('CollectFundamentals',
+    self.add_states_schedule('CollectFundamentals',
       schedule=events.Schedule.cron(week_day='SUN',hour="2", minute="0"))
 
     self.add_states_schedule('CollectIntraday',
