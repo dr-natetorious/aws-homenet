@@ -1,3 +1,4 @@
+from aws_cdk.aws_lambda import Function
 from infra.services.rtsp.resources.base_resources import RtspBaseResourcesConstruct
 from infra.services.rtsp.analyzers.analysis_function import RtspAnalysisFunction
 from aws_cdk import (
@@ -8,12 +9,17 @@ from aws_cdk import (
   aws_sns_subscriptions as subs,
   aws_sqs as sqs,
   aws_iam as iam,
+  aws_s3objectlambda as s3ol,
 )
 
 class RtspGroundTruthManifestGenerationFunction(RtspAnalysisFunction):
+  """
+  Deploys the Lambda Function that responds to S3 Inventory reports 
+  ... and generating Amazon SageMaker GroundTruth manifests.
+  """
   @property
   def source_directory(self) -> str:
-    return 'src/rtsp/groundtruth-manifest-gen'
+    return 'src/rtsp/ml/groundtruth-manifest-gen'
 
   @property
   def function_timeout(self) -> core.Duration:
@@ -30,6 +36,59 @@ class RtspGroundTruthManifestGenerationFunction(RtspAnalysisFunction):
   def __init__(self, scope: core.Construct, id: str, infra: RtspBaseResourcesConstruct, topic:sns.ITopic, **kwargs) -> None:
     self.__topic = topic
     super().__init__(scope, id, infra, **kwargs)
+
+class RtspNormalizeImageAccessPointFunction(RtspAnalysisFunction):
+  """
+  Deploys the Amazon S3 Object Lambda for normalizing images.
+  """
+  @property
+  def source_directory(self) -> str:
+    return 'src/rtsp/ml/norm-image-ap'
+
+  @property
+  def function_timeout(self) -> core.Duration:
+    return core.Duration.minutes(10)
+
+  @property
+  def component_name(self) -> str:
+    return 'RtspNormImage'
+
+  @property
+  def topic(self) -> sns.ITopic:
+    return self.__topic
+  
+  def __init__(self, scope: core.Construct, id: str, infra: RtspBaseResourcesConstruct, **kwargs) -> None:
+    super().__init__(scope, id, infra, **kwargs)
+
+class RtspNormalizeImageAccessPoint(core.Construct):
+  def __init__(self, scope: core.Construct, infra:RtspBaseResourcesConstruct, id: str) -> None:
+    super().__init__(scope, id)
+    
+    # Create S3 Object Lambda
+    normalize_function = RtspNormalizeImageAccessPointFunction(self,'NormalizeImage',
+      infra=infra)
+    
+    accesspoint = s3.CfnAccessPoint(self,'S3-AccessPoint',
+      bucket= infra.bucket.bucket_name,
+      name='Normalize-Image',
+      vpc_configuration= s3.CfnAccessPoint.VpcConfigurationProperty(
+        vpc_id= self.infra.vpc.vpc_id
+      ))
+
+    # lambda_bind = s3ol.CfnAccessPoint(self,'Lambda-AccessPoint',
+    #   name='RtspNormalizeImages',
+    #   object_lambda_configuration= s3ol.CfnAccessPoint.ObjectLambdaConfigurationProperty(
+    #     supporting_access_point= accesspoint.ref,
+    #     cloud_watch_metrics_enabled=True,
+    #     transformation_configurations=[
+    #       s3ol.CfnAccessPoint.TransformationConfigurationProperty(
+    #         actions=['GetObject'],
+    #         content_transformation={
+    #           'FunctionArn':normalize_function.function.function_arn
+    #         }
+    #       )
+    #     ]
+    #   ))
 
 class RtspDataPreparation(core.Construct):
   """
@@ -119,18 +178,7 @@ class RtspDataPreparation(core.Construct):
     
     self.inventories.grant_read_write(groundtruth.function.role)
 
-    # Create Role for GroundTruth
-    # groundtruth_svc_role = iam.Role(self,'GroundTruthServiceRole',
-    #   role_name='HomeNet-GroundTruthServiceRole@{}.{}'.format(
-    #     self.infra.landing_zone.zone_name,
-    #     core.Stack.of(self).region
-    #   ).lower(),
-    #   path='/service-role/',
-    #   assumed_by= iam.ServicePrincipal(
-    #     service='sagemaker',
-    #     region=core.Stack.of(self).region),
-    #   managed_policies=[
-    #     iam.ManagedPolicy.from_aws_managed_policy_name('AmazonSageMakerFullAccess')
-    #   ])
-    # self.inventories.grant_read_write(groundtruth_svc_role)
+    # Create the RtspNormalizeImage S3 Object Lambda
+    #RtspNormalizeImageAccessPoint(self,'NormalizeImage', infra=infra)
+
     

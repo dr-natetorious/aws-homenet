@@ -1,0 +1,38 @@
+{
+    "Records": [
+      {
+        "eventVersion": "2.1",
+        "eventSource": "aws:s3",
+        "awsRegion": "us-east-1",
+        "eventTime": "2021-07-21T07:54:37.218Z",
+        "eventName": "ObjectCreated:Put",
+        "userIdentity": {
+          "principalId": "AWS:AROAII6QBJF3CVCYZA6A4:i-07d3169c7f403b3d1"
+        },
+        "requestParameters": {
+          "sourceIPAddress": "10.0.1.226"
+        },
+        "responseElements": {
+          "x-amz-request-id": "CMVKZ22MPZ3D92DK",
+          "x-amz-id-2": "WRL2317oq3aKNMB3lCvccddPYqjFnB6OFB2OQtE68rSeUhoib5zKbNds929snezc0zmfXf1OXqAigFZaEEy2ZB9t2x4KfgWs"
+        },
+        "s3": {
+          "s3SchemaVersion": "1.0",
+          "configurationId": "YzRiM2MzZWYtZDkwYS00N2IxLTkyMmUtNGY2OTYxNmZhYzU3",
+          "bucket": {
+            "name": "homenet-hybrid.rtsp-inventories.us-east-1.virtual.world",
+            "ownerIdentity": {
+              "principalId": "ALH4O32NROZP1"
+            },
+            "arn": "arn:aws:s3:::homenet-hybrid.rtsp-inventories.us-east-1.virtual.world"
+          },
+          "object": {
+            "key": "eufy/moonbase.cameras.real.world//homenet-hybrid.us-east-1.virtual.world/Moonbase-InventoryReport/2021-07-20T00-00Z/manifest.json",
+            "size": 207,
+            "eTag": "d7ccde00c1e3ac41efa6910fef6eb630",
+            "sequencer": "0060F7D2BDE2422C56"
+          }
+        }
+      }
+    ]
+  }

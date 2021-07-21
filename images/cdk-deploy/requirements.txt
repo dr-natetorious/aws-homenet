@@ -21,4 +21,5 @@ aws_cdk.aws_s3_deployment
 aws_cdk.aws_finspace
 aws_cdk.aws_stepfunctions_tasks
 aws_cdk.aws_events
+aws_cdk.aws_s3objectlambda
 cryptography
