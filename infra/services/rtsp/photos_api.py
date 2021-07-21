@@ -24,7 +24,7 @@ class PhotosApiConstruct(core.Construct):
       
     # Configure the container resources...
     self.repo = assets.DockerImageAsset(self,'Repo',
-      directory='src/photo-api',
+      directory='src/rtsp/photo-api',
       file='Dockerfile')
 
     code = lambda_.DockerImageCode.from_ecr(

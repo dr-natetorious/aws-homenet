@@ -24,6 +24,10 @@ class RtspAnalysisFunction(core.Construct):
     return self.__class__.__name__
 
   @property
+  def topic(self)->sns.ITopic:
+    return self.infra.frameAnalyzed
+
+  @property
   def filter_policy(self)->Mapping[str,SubscriptionFilter]:
     return {}
   
@@ -31,6 +35,7 @@ class RtspAnalysisFunction(core.Construct):
     infra:RtspBaseResourcesConstruct,
     **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
+    self.infra = infra
 
     self.repo = assets.DockerImageAsset(self,'Repo',
       directory=self.source_directory,
@@ -76,7 +81,7 @@ class RtspAnalysisFunction(core.Construct):
       queue_name=self.function.function_name+"_dlq")
 
     self.function.add_event_source(events.SnsEventSource(
-      topic= infra.frameAnalyzed,
+      topic= self.topic,
       dead_letter_queue= self.dlq,
       filter_policy=self.filter_policy))
     

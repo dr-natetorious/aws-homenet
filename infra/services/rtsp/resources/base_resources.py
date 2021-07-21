@@ -62,6 +62,11 @@ class RtspBaseResourcesConstruct(core.Construct):
     self.bucket = s3.Bucket(self,'Bucket',
       removal_policy= core.RemovalPolicy.RETAIN,
       bucket_name=bucket_name,
+      cors= [
+        s3.CorsRule(
+          allowed_methods=[s3.HttpMethods.GET],
+          allowed_origins=['*'])
+      ],
       lifecycle_rules=[
         s3.LifecycleRule(
           id='Retain_5Years',
