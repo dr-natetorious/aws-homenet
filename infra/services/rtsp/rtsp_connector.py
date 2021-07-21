@@ -26,7 +26,7 @@ class RtspConnectorConstruct(JumpBoxConstruct):
 
     # Create repository
     self.container_image = assets.DockerImageAsset(self,'Container',
-      directory='src/rtsp-connector')
+      directory='src/rtsp/connector')
 
     self.log_group = logs.LogGroup(self,'LogGroup',
       log_group_name='/homenet/rtsp/connector',
@@ -79,7 +79,7 @@ class RtspConnectorConstruct(JumpBoxConstruct):
       destination_bucket=self.infra.bucket,
       destination_key_prefix='app/rtsp-connector',
       sources=[s3d.Source.asset(
-        path='src/rtsp-connector')])
+        path='src/rtsp/connector')])
     self.instance.node.add_dependency(deployment)
 
     # Configure the startup script

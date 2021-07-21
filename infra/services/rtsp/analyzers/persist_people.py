@@ -11,7 +11,7 @@ class RtspPersistPeopleFunction(RtspAnalysisFunction):
 
   @property
   def source_directory(self) -> str:
-    return 'src/rtsp-persist-people'
+    return 'src/rtsp/persist-people'
 
   @property
   def filter_policy(self)->Mapping[str,sns.SubscriptionFilter]:

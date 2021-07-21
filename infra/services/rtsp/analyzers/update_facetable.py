@@ -17,7 +17,7 @@ class RtspUpdateFaceTableFunction(RtspAnalysisFunction):
 
   @property
   def source_directory(self) -> str:
-    return 'src/rtsp-update-facetable'
+    return 'src/rtsp/update-facetable'
 
   @property
   def filter_policy(self)->Mapping[str,sns.SubscriptionFilter]:

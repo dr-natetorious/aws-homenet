@@ -30,7 +30,7 @@ class RtspEcsClusterConstruct(core.Construct):
     
     self.container = ecs.ContainerImage.from_docker_image_asset(
       asset=ecr.DockerImageAsset(self,'RtspConnectorContainer',
-        directory='src/rtsp-connector',
+        directory='src/rtsp/connector',
         file='Dockerfile'))
 
     self.task_role = iam.Role(self,'TaskRole',
