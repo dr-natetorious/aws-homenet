@@ -56,20 +56,23 @@ class RtspBaseResourcesConstruct(core.Construct):
     self.secrets = RtspCameraSecrets(self,'Secrets',landing_zone=landing_zone)
  
     # Create the stateful bucket
+    bucket_name = 'homenet-{}.{}.virtual.world'.format(
+        'hybrid',#landing_zone.zone_name.lower(),
+        core.Stack.of(self).region)
     self.bucket = s3.Bucket(self,'Bucket',
       removal_policy= core.RemovalPolicy.RETAIN,
-      bucket_name='homenet-{}.{}.virtual.world'.format(
-        'hybrid',#landing_zone.zone_name.lower(),
-        core.Stack.of(self).region),
+      bucket_name=bucket_name,
       lifecycle_rules=[
         s3.LifecycleRule(
-          abort_incomplete_multipart_upload_after= core.Duration.days(1),
-          expiration= core.Duration.days(365)),
+          id='Retain_5Years',
+          abort_incomplete_multipart_upload_after= core.Duration.days(7),
+          expiration= core.Duration.days(365*5)),
         s3.LifecycleRule(
+          id='Remove_CachedFiles',
           tag_filters={'Cached':'7d'},
           expiration= core.Duration.days(7))
       ])
-
+    
     # Create Notification Topics for eventing
     self.frameAnalyzed = sns.Topic(self,'FrameAnalysis',
       display_name='HomeNet-{}-Rtsp-FrameAnalysis'.format(landing_zone.zone_name),

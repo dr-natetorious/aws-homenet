@@ -78,7 +78,7 @@ class Collector:
     if len(ignored)>0:
       print('CreateQueue: Ignoring: {}'.format(len(ignored)))
     if len(completed_items)>0:
-      print('CreateQueue: Completed Items: {}'.format(len(completed_items)))
+      print('CreateQueue: Already Completed: {} Items'.format(len(completed_items)))
     return queue
 
   @staticmethod
@@ -147,6 +147,7 @@ class QueuedCollector(Collector):
     """
     Discovers which symbols are optionable.
     """
+    print('Collector: {} running for max_items={}'.format(self.__class__.__name__, max_items))
     queue = self.create_symbol_queue_from_marker()
     if queue.unfinished_tasks == 0:
       raise ValueError('No tasks discovered; this is likely a defect.')

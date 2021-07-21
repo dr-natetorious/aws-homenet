@@ -65,7 +65,11 @@ class FsiSecretManagement(core.Construct):
       }
     )
 
+    resources.tda_secret.grant_write(self.function.role)
+    resources.tda_secret.grant_read(self.function.role)
+
     # Automatically rotate credentials every 30 days...
-    resources.tda_secret.add_rotation_schedule('Rotation',
-      automatically_after=core.Duration.days(30),
-      rotation_lambda=self.function)
+    # resources.tda_secret.add_rotation_schedule('Rotation',
+    #   automatically_after=core.Duration.days(30),
+    #   rotation_lambda=self.function)
+

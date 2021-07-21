@@ -18,7 +18,6 @@ class OptionsCollection(QueuedCollector):
   def batch_size(self) -> int:
     return 5
 
-
   def fetch_known_symbols(self)->List[dict]:
     """
     Discover equities that are Normal or Halted

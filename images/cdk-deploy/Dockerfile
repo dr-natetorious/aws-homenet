@@ -14,3 +14,6 @@ RUN chmod a+x /usr/local/bin/ship-it
 
 COPY ship-fsi.sh /usr/local/bin/ship-fsi
 RUN chmod a+x /usr/local/bin/ship-fsi
+
+COPY ship-rtsp.sh /usr/local/bin/ship-rtsp
+RUN chmod a+x /usr/local/bin/ship-rtsp

@@ -51,12 +51,12 @@ def process_notification(event:Mapping[str,Any], context):
   elif action == 'DiscoverOptionable':
     extension = lambda: OptionableDiscovery(tdclient, state_store).run(max_items=max_tda_calls)
   elif action == 'CollectFundamentals':
-    extension = lambda: FundamentalCollection(tdclient, state_store).run(max_items=max_tda_calls)    
+    extension = lambda: FundamentalCollection(tdclient, state_store).run(max_items=250)#max_tda_calls)    
   elif action == 'CollectHistoric':
     candle_config = StateStore.default_value(event,'CandleConfiguration', None)
-    extension= lambda: HistoricQuoteCollection(tdclient, state_store, candle_config).run(max_items=max_tda_calls)
+    extension= lambda: HistoricQuoteCollection(tdclient, state_store, candle_config).run(max_items=250)#max_tda_calls)
   elif action == 'CollectOptions':
-    extension= lambda: OptionsCollection(tdclient, state_store).run(max_items=max_tda_calls)
+    extension= lambda: OptionsCollection(tdclient, state_store).run(max_items=250)#max_tda_calls)
   elif action == 'CollectTransactions':
     lookback_days=7
     if "lookback_days" in event:

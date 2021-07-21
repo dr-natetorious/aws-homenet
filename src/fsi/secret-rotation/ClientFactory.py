@@ -22,7 +22,7 @@ class ClientFactory:
 
   @staticmethod
   #@xray_recorder.capture('ClientFactory::create_client')
-  def create_client(force_refresh:bool=True) -> TDClient:
+  def create_client(force_refresh:bool=True, version:str='AWSCURRENT') -> TDClient:
     factory = ClientFactory()
     
     base_path = '/tmp/'
@@ -31,7 +31,7 @@ class ClientFactory:
 
     #outfile = TemporaryDirectory(dir='FsiCollector')
     outpath = path.join(base_path,'creds.json')
-    creds_file = factory.__fetch_credential_file(force_refresh=force_refresh, outpath=outpath)
+    creds_file = factory.__fetch_credential_file(force_refresh=force_refresh, outpath=outpath, version=version)
     client = TDClient(
       client_id=factory.td_client_id,
       redirect_uri=factory.td_redirect_uri,
@@ -41,14 +41,15 @@ class ClientFactory:
     return client
 
 
-  def __fetch_credential_file(self, outpath:str = './creds.json', force_refresh:bool=False):
+  def __fetch_credential_file(self, outpath:str = './creds.json', force_refresh:bool=False, version='AWSCURRENT'):
     if path.exists(outpath):
       if not force_refresh:
         return outpath
 
     secrets = boto3.client('secretsmanager')
     response = secrets.get_secret_value(
-      SecretId=self.td_credentials_secret_id)
+      SecretId=self.td_credentials_secret_id,
+      VersionStage=version)
 
     td_creds = response['SecretString']
     

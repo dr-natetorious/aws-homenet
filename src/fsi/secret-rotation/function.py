@@ -9,9 +9,6 @@ import os
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-client = ClientFactory.create_client(force_refresh=True)
-
-
 def lambda_handler(event:dict, context:dict):
     """Secrets Manager Rotation Template
 
@@ -97,7 +94,8 @@ def create_secret(service_client, arn, token):
         service_client.get_secret_value(SecretId=arn, VersionId=token, VersionStage="AWSPENDING")
         logger.info("createSecret: Successfully retrieved secret for %s." % arn)
     except service_client.exceptions.ResourceNotFoundException:
-        # Get exclude characters from environment variable
+        # Fetch an updated access token
+        client = ClientFactory.create_client(force_refresh=True)
         if not client.grab_refresh_token():
           raise ValueError('Unable to grab_refresh_token()')
         
@@ -142,8 +140,11 @@ def test_secret(service_client, arn, token):
         token (string): The ClientRequestToken associated with the secret version
 
     """
-    # This is where the secret should be tested against the service
-    raise NotImplementedError
+    client = ClientFactory.create_client(force_refresh=True, version='AWSPENDING')
+    quotes = client.get_quotes(instruments=['MSFT'])
+    if quotes is None:
+      raise ValueError('Unable to verify test_secret')
+      
 
 
 def finish_secret(service_client, arn, token):
