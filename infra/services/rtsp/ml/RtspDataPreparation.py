@@ -16,6 +16,10 @@ class RtspGroundTruthManifestGenerationFunction(RtspAnalysisFunction):
     return 'src/rtsp/groundtruth-manifest-gen'
 
   @property
+  def function_timeout(self) -> core.Duration:
+    return core.Duration.minutes(10)
+
+  @property
   def component_name(self) -> str:
     return 'RtspGroundTruthManGen'
 
@@ -40,7 +44,6 @@ class RtspDataPreparation(core.Construct):
     self.__infra = infra
 
     # Create the inventory bucket...
-    
     self.inventories = s3.Bucket(self,'InventoryBucket',
       bucket_name='homenet-{}.rtsp-inventories.{}.virtual.world'.format(
         self.infra.landing_zone.zone_name,
@@ -54,9 +57,13 @@ class RtspDataPreparation(core.Construct):
       ],
       lifecycle_rules=[
         s3.LifecycleRule(
-          id='Retain_30D',
+          id='Transition-to-IA-after-30D',
+          prefix='eufy/',
           abort_incomplete_multipart_upload_after= core.Duration.days(7),
-          expiration= core.Duration.days(30))
+          transitions=[s3.Transition(
+            storage_class= s3.StorageClass.INFREQUENT_ACCESS,
+            transition_after= core.Duration.days(30)
+          )])
       ])
 
     # Create inventory collections for the Eufy Homebases...
@@ -70,7 +77,7 @@ class RtspDataPreparation(core.Construct):
         bucket=self.inventories,
         bucket_owner= core.Aws.ACCOUNT_ID,
         prefix=None))
-        
+
     for base_name in ['Moonbase','Starbase']:
       prefix='eufy/{}.cameras.real.world/'.format(base_name).lower()
       self.infra.bucket.add_inventory(

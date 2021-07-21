@@ -28,6 +28,10 @@ class RtspAnalysisFunction(core.Construct):
     return self.infra.frameAnalyzed
 
   @property
+  def function_timeout(self)->core.Duration:
+    return core.Duration.minutes(1)
+
+  @property
   def filter_policy(self)->Mapping[str,SubscriptionFilter]:
     return {}
   
@@ -64,7 +68,7 @@ class RtspAnalysisFunction(core.Construct):
         infra.landing_zone.zone_name,
         self.component_name),
       description='Python container lambda function for '+self.component_name,
-      timeout= core.Duration.minutes(1),
+      timeout= self.function_timeout,
       tracing= lambda_.Tracing.ACTIVE,
       vpc= infra.landing_zone.vpc,
       log_retention= RetentionDays.FIVE_DAYS,
