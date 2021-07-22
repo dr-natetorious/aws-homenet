@@ -32,9 +32,10 @@ class RtspBaseResourcesConstruct(core.Construct):
   @property
   def landing_zone(self)->IVpcLandingZone:
     return self.__landing_zone
+    
   @property
   def vpc(self)->ec2.IVpc:
-    return self.__landing_zone.__vpc
+    return self.__landing_zone.vpc
 
   @property
   def subnet_group_name(self)->str:

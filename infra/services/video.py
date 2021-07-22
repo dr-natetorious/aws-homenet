@@ -34,8 +34,8 @@ class VideoSubnet(core.Construct):
     self.persist_people = RtspUpdateFaceTableFunction(self,'UpdateFaceTable',
       infra= self.infra)
 
-    # Setup Machine Learning Services
-    RtspMachineLearning(self,'MachineLearning', infra=self.infra)
+    RtspMachineLearning(self,'MachineLearning',
+      infra=self.infra)
 
   def configure_dns(self,zone:r53.IHostedZone, ca:CertificateAuthority)->None:
     self.photos_api.configure_dns(zone, ca)

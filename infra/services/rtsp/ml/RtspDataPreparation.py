@@ -1,4 +1,5 @@
-from aws_cdk.aws_lambda import Function
+from aws_cdk.aws_efs import CfnAccessPoint
+from infra.services.rtsp.resources.function import RtspFunction
 from infra.services.rtsp.resources.base_resources import RtspBaseResourcesConstruct
 from infra.services.rtsp.analyzers.analysis_function import RtspAnalysisFunction
 from aws_cdk import (
@@ -37,7 +38,7 @@ class RtspGroundTruthManifestGenerationFunction(RtspAnalysisFunction):
     self.__topic = topic
     super().__init__(scope, id, infra, **kwargs)
 
-class RtspNormalizeImageAccessPointFunction(RtspAnalysisFunction):
+class RtspNormalizeImageAccessPointFunction(RtspFunction):
   """
   Deploys the Amazon S3 Object Lambda for normalizing images.
   """
@@ -52,60 +53,52 @@ class RtspNormalizeImageAccessPointFunction(RtspAnalysisFunction):
   @property
   def component_name(self) -> str:
     return 'RtspNormImage'
-
-  @property
-  def topic(self) -> sns.ITopic:
-    return self.__topic
   
   def __init__(self, scope: core.Construct, id: str, infra: RtspBaseResourcesConstruct, **kwargs) -> None:
-    super().__init__(scope, id, infra, **kwargs)
+    super().__init__(scope, id, infra=infra, **kwargs)
 
 class RtspNormalizeImageAccessPoint(core.Construct):
-  def __init__(self, scope: core.Construct, infra:RtspBaseResourcesConstruct, id: str) -> None:
+  def __init__(self, scope: core.Construct, id: str, infra:RtspBaseResourcesConstruct,) -> None:
     super().__init__(scope, id)
     
     # Create S3 Object Lambda
-    normalize_function = RtspNormalizeImageAccessPointFunction(self,'NormalizeImage',
+    self.normalize_function = RtspNormalizeImageAccessPointFunction(self,'NormalizeImage',
       infra=infra)
     
-    accesspoint = s3.CfnAccessPoint(self,'S3-AccessPoint',
+    self.s3_accesspoint = s3.CfnAccessPoint(self,'AccessPoint',
       bucket= infra.bucket.bucket_name,
-      name='Normalize-Image',
+      name='rtsp-normalized-image',
       vpc_configuration= s3.CfnAccessPoint.VpcConfigurationProperty(
-        vpc_id= self.infra.vpc.vpc_id
-      ))
+        vpc_id= infra.landing_zone.vpc.vpc_id
+      )
+    )
 
-    # lambda_bind = s3ol.CfnAccessPoint(self,'Lambda-AccessPoint',
-    #   name='RtspNormalizeImages',
-    #   object_lambda_configuration= s3ol.CfnAccessPoint.ObjectLambdaConfigurationProperty(
-    #     supporting_access_point= accesspoint.ref,
-    #     cloud_watch_metrics_enabled=True,
-    #     transformation_configurations=[
-    #       s3ol.CfnAccessPoint.TransformationConfigurationProperty(
-    #         actions=['GetObject'],
-    #         content_transformation={
-    #           'FunctionArn':normalize_function.function.function_arn
-    #         }
-    #       )
-    #     ]
-    #   ))
+    self.lambda_accesspoint = s3ol.CfnAccessPoint(self,'Lambda-AccessPoint',
+      name='rtsp-normalized-image-ap'.lower(),
+      object_lambda_configuration= s3ol.CfnAccessPoint.ObjectLambdaConfigurationProperty(
+        supporting_access_point= self.s3_accesspoint.get_att('Arn').to_string(),
+        cloud_watch_metrics_enabled=True,
+        transformation_configurations=[
+          s3ol.CfnAccessPoint.TransformationConfigurationProperty(
+            actions=['GetObject'],
+            content_transformation= {
+              'AwsLambda': {
+                'FunctionArn':self.normalize_function.function.function_arn
+              },
+            })
+          ]))
 
 class RtspDataPreparation(core.Construct):
   """
   Represents the Rtsp Data Preparation Layer
   """
-  @property
-  def infra(self)->RtspBaseResourcesConstruct:
-    return self.__infra
-
-  def __init__(self, scope: core.Construct, id: str,infra:RtspBaseResourcesConstruct, **kwargs) -> None:
+  def __init__(self, scope: core.Construct, id: str, infra:RtspBaseResourcesConstruct, **kwargs) -> None:
     super().__init__(scope, id, **kwargs)
-    self.__infra = infra
 
     # Create the inventory bucket...
     self.inventories = s3.Bucket(self,'InventoryBucket',
       bucket_name='homenet-{}.rtsp-inventories.{}.virtual.world'.format(
-        self.infra.landing_zone.zone_name,
+        infra.landing_zone.zone_name,
         core.Stack.of(self).region
       ).lower(),
       removal_policy= core.RemovalPolicy.DESTROY,
@@ -126,7 +119,7 @@ class RtspDataPreparation(core.Construct):
       ])
 
     # Create inventory collections for the Eufy Homebases...
-    self.infra.bucket.add_inventory(
+    infra.bucket.add_inventory(
       objects_prefix='eufy/',
       inventory_id='{}-InventoryReport'.format('EufyFull'),
       format =s3.InventoryFormat.CSV,
@@ -139,7 +132,7 @@ class RtspDataPreparation(core.Construct):
 
     for base_name in ['Moonbase','Starbase']:
       prefix='eufy/{}.cameras.real.world/'.format(base_name).lower()
-      self.infra.bucket.add_inventory(
+      infra.bucket.add_inventory(
         objects_prefix=prefix,
         inventory_id='{}-InventoryReport'.format(base_name),
         format =s3.InventoryFormat.CSV,
@@ -164,12 +157,12 @@ class RtspDataPreparation(core.Construct):
     self.inventoryAvailable.add_subscription(
       subs.SqsSubscription(
         raw_message_delivery=True,
-        queue=sqs.Queue(self,'InventoryDebugQueue',
+        queue= sqs.Queue(self,'InventoryDebugQueue',
           removal_policy=core.RemovalPolicy.DESTROY,
           retention_period=core.Duration.days(7),
           queue_name='HomeNet-{}-RtspInventoryAvailable_Debug'.format(
-            infra.landing_zone.zone_name)          
-        )))
+            infra.landing_zone.zone_name))
+      ))
 
     # Subscribe the GroundTruth Manifest Generator
     groundtruth = RtspGroundTruthManifestGenerationFunction(self,'GroundTruthManifest',
@@ -179,6 +172,4 @@ class RtspDataPreparation(core.Construct):
     self.inventories.grant_read_write(groundtruth.function.role)
 
     # Create the RtspNormalizeImage S3 Object Lambda
-    #RtspNormalizeImageAccessPoint(self,'NormalizeImage', infra=infra)
-
-    
+    RtspNormalizeImageAccessPoint(scope=self,id='NormalizedImage', infra=infra)
